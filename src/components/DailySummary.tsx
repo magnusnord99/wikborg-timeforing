@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Project, TimeEntry } from '../types'
 
 interface Props {
@@ -6,8 +7,9 @@ interface Props {
 }
 
 export function DailySummary({ entries, projects }: Props) {
+  const [expandedProject, setExpandedProject] = useState<string | null>(null)
   const completed = entries.filter((e) => e.end_time)
-  const byProject = new Map<string, { project: Project; minutes: number }>()
+  const byProject = new Map<string, { project: Project; minutes: number; entries: TimeEntry[] }>()
 
   for (const entry of completed) {
     const project = projects.find((p) => p.id === entry.project_id)
@@ -20,8 +22,9 @@ export function DailySummary({ entries, projects }: Props) {
     const existing = byProject.get(project.id)
     if (existing) {
       existing.minutes += mins
+      existing.entries.push(entry)
     } else {
-      byProject.set(project.id, { project, minutes: mins })
+      byProject.set(project.id, { project, minutes: mins, entries: [entry] })
     }
   }
 
@@ -43,12 +46,43 @@ export function DailySummary({ entries, projects }: Props) {
       <ul style={styles.list}>
         {[...byProject.values()]
           .sort((a, b) => b.minutes - a.minutes)
-          .map(({ project, minutes }) => (
-            <li key={project.id} style={styles.item}>
-              <span>{project.name}</span>
-              <span>{formatHours(minutes)}</span>
-            </li>
-          ))}
+          .map(({ project, minutes, entries: projectEntries }) => {
+            const descriptions = projectEntries
+              .map((e) => e.description?.trim())
+              .filter(Boolean) as string[]
+            const isExpanded = expandedProject === project.id
+
+            return (
+              <li key={project.id} style={styles.item}>
+                <div style={styles.itemRow}>
+                  <span>{project.name}</span>
+                  <span>{formatHours(minutes)}</span>
+                </div>
+                {descriptions.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedProject(isExpanded ? null : project.id)
+                      }
+                      style={styles.showButton}
+                    >
+                      {isExpanded ? 'Skjul' : 'Vis hva jeg har gjort'}
+                    </button>
+                    {isExpanded && (
+                      <div style={styles.descriptionList}>
+                        {descriptions.map((desc, i) => (
+                          <div key={i} style={styles.descriptionItem}>
+                            • {desc}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </li>
+            )
+          })}
       </ul>
     </div>
   )
@@ -73,10 +107,33 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 0,
   },
   item: {
-    display: 'flex',
-    justifyContent: 'space-between',
     padding: '8px 0',
     borderBottom: '1px solid #334155',
     fontSize: 15,
+  },
+  itemRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+  },
+  showButton: {
+    marginTop: 6,
+    padding: '4px 0',
+    background: 'none',
+    border: 'none',
+    color: '#64748b',
+    fontSize: 13,
+    cursor: 'pointer',
+    textDecoration: 'underline',
+  },
+  descriptionList: {
+    marginTop: 8,
+    padding: 12,
+    background: '#0f172a',
+    borderRadius: 8,
+    fontSize: 14,
+    color: '#94a3b8',
+  },
+  descriptionItem: {
+    marginBottom: 4,
   },
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Project, TimeEntry } from '../types'
 
 interface Props {
@@ -52,6 +52,16 @@ export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete }: Pr
                       ({formatDuration(entry.start_time, entry.end_time)})
                     </span>
                   )}
+                  {entry.description && !isActive && (
+                    <span style={styles.description}>{entry.description}</span>
+                  )}
+                  {isActive && (
+                    <CommentInput
+                      value={entry.description ?? ''}
+                      onSave={(desc) => onEdit(entry.id, { description: desc || null })}
+                      placeholder="Hva jobber du med? (valgfritt)"
+                    />
+                  )}
                 </div>
                 {!isActive && (
                   <div style={styles.actions}>
@@ -84,6 +94,38 @@ function toDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+function CommentInput({
+  value,
+  onSave,
+  placeholder,
+}: {
+  value: string
+  onSave: (v: string) => void
+  placeholder: string
+}) {
+  const [local, setLocal] = useState(value)
+  useEffect(() => setLocal(value), [value])
+
+  function handleBlur() {
+    if (local.trim() !== value.trim()) {
+      onSave(local.trim())
+    }
+  }
+
+  return (
+    <div style={styles.commentInputWrap}>
+      <input
+        type="text"
+        value={local}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        style={styles.commentInput}
+      />
+    </div>
+  )
+}
+
 function EditForm({
   entry,
   projects,
@@ -98,6 +140,7 @@ function EditForm({
   const [projectId, setProjectId] = useState(entry.project_id)
   const [startTime, setStartTime] = useState(toDatetimeLocal(entry.start_time))
   const [endTime, setEndTime] = useState(entry.end_time ? toDatetimeLocal(entry.end_time) : '')
+  const [description, setDescription] = useState(entry.description ?? '')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -105,11 +148,19 @@ function EditForm({
       project_id: projectId,
       start_time: startTime ? new Date(startTime).toISOString() : entry.start_time,
       end_time: endTime ? new Date(endTime).toISOString() : null,
+      description: description.trim() || null,
     })
   }
 
   return (
     <form onSubmit={handleSubmit} style={styles.editForm}>
+      <input
+        type="text"
+        placeholder="Kommentar (hva ble gjort)"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        style={styles.input}
+      />
       <select
         value={projectId}
         onChange={(e) => setProjectId(e.target.value)}
@@ -192,6 +243,27 @@ const styles: Record<string, React.CSSProperties> = {
   duration: {
     fontSize: 13,
     color: '#64748b',
+  },
+  description: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  commentInputWrap: {
+    marginTop: 8,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  commentInput: {
+    flex: 1,
+    padding: 8,
+    borderRadius: 6,
+    border: '1px solid #334155',
+    background: '#0f172a',
+    color: '#e2e8f0',
+    fontSize: 14,
   },
   actions: {
     display: 'flex',
