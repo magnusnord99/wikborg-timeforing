@@ -33,7 +33,7 @@ function App() {
         textAlign: 'center',
       }}>
         <h1 style={{ marginBottom: 16 }}>Wikborg Tidsføring</h1>
-        <p style={{ color: '#94a3b8', maxWidth: 400 }}>
+        <p style={{ color: 'var(--color-text-muted)', maxWidth: 400 }}>
           Kopier <code>.env.example</code> til <code>.env</code> og fyll inn
           Supabase URL og anon key fra prosjektet ditt.
         </p>
@@ -43,7 +43,7 @@ function App() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', color: 'var(--color-text)' }}>
         <p>Laster...</p>
       </div>
     )
