@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Check, FolderKanban, Play, Plus, Square, Trash2, X } from 'lucide-react'
 import type { Project, TimeEntry } from '../types'
 
 interface Props {
@@ -40,19 +41,23 @@ export function ProjectsList({
           style={styles.input}
         />
         <button type="submit" disabled={!newName.trim()} style={styles.addButton}>
-          Legg til
+          <Plus size={16} />
+          <span>Legg til</span>
         </button>
       </form>
 
       <p style={styles.helperText}>
         {activeEntry
           ? 'Du har en aktiv timer. Stopp den før du starter en ny.'
-          : 'Hold prosjektlisten kort, så blir det raskere å føre tid.'}
+          : 'Velg prosjektet du faktisk skal føre på, så holder fokusvisningen seg ren.'}
       </p>
 
       {projects.length === 0 && (
         <div style={styles.emptyState}>
-          <strong>Ingen prosjekter ennå</strong>
+          <div style={styles.emptyTitle}>
+            <FolderKanban size={18} />
+            <strong>Ingen prosjekter ennå</strong>
+          </div>
           <p style={styles.emptyText}>
             Opprett det første prosjektet ditt for å kunne starte en timer.
           </p>
@@ -62,12 +67,18 @@ export function ProjectsList({
       <ul style={styles.list}>
         {projects.map((project) => {
           const isActive = activeEntry?.project_id === project.id
+
           return (
             <li key={project.id} style={styles.item}>
               <div style={styles.projectInfo}>
                 <div style={styles.projectHeader}>
                   <span style={styles.projectName}>{project.name}</span>
-                  {isActive && <span style={styles.activeBadge}>Aktiv nå</span>}
+                  {isActive && (
+                    <span style={styles.activeBadge}>
+                      <Play size={12} />
+                      <span>Aktiv nå</span>
+                    </span>
+                  )}
                 </div>
                 <span style={styles.projectMeta}>
                   {isActive
@@ -77,10 +88,12 @@ export function ProjectsList({
                       : 'Klar til å starte timer.'}
                 </span>
               </div>
+
               <div style={styles.actions}>
                 {isActive ? (
                   <button onClick={onStop} style={{ ...styles.button, ...styles.stopButton }}>
-                    Stopp
+                    <Square size={15} />
+                    <span>Stopp</span>
                   </button>
                 ) : (
                   <button
@@ -88,27 +101,32 @@ export function ProjectsList({
                     disabled={!!activeEntry}
                     style={styles.button}
                   >
-                    Start timer
+                    <Play size={15} />
+                    <span>Start</span>
                   </button>
                 )}
+
                 {confirmDelete === project.id ? (
                   <>
                     <button
                       onClick={() => onRemove(project.id)}
                       style={{ ...styles.button, ...styles.dangerButton }}
                     >
-                      Bekreft
+                      <Check size={15} />
+                      <span>Bekreft</span>
                     </button>
-                    <button onClick={() => setConfirmDelete(null)} style={styles.button}>
-                      Avbryt
+                    <button onClick={() => setConfirmDelete(null)} style={styles.ghostButton}>
+                      <X size={15} />
+                      <span>Avbryt</span>
                     </button>
                   </>
                 ) : (
                   <button
                     onClick={() => setConfirmDelete(project.id)}
-                    style={{ ...styles.button, ...styles.removeButton }}
+                    style={{ ...styles.ghostButton, ...styles.removeButton }}
                   >
-                    Fjern
+                    <Trash2 size={15} />
+                    <span>Fjern</span>
                   </button>
                 )}
               </div>
@@ -133,11 +151,14 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 10,
     borderRadius: 8,
     border: '1px solid var(--color-border)',
-    background: 'rgba(5, 6, 9, 0.72)',
+    background: 'var(--color-input-bg)',
     color: 'var(--color-text)',
     fontSize: 14,
   },
   addButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
     padding: '10px 16px',
     borderRadius: 8,
     border: 'none',
@@ -159,6 +180,11 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 14,
     background: 'rgba(15, 23, 42, 0.44)',
     border: '1px dashed var(--color-elevated-border)',
+  },
+  emptyTitle: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
   },
   emptyText: {
     margin: '8px 0 0',
@@ -201,6 +227,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
   },
   activeBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
     padding: '4px 8px',
     borderRadius: 999,
     background: 'var(--color-accent-soft)',
@@ -218,8 +247,11 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
   },
   button: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
     padding: '8px 12px',
-    borderRadius: 6,
+    borderRadius: 8,
     border: 'none',
     background: 'var(--color-accent)',
     color: 'white',
@@ -229,10 +261,20 @@ const styles: Record<string, React.CSSProperties> = {
   stopButton: {
     background: 'var(--color-danger)',
   },
-  removeButton: {
+  ghostButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 12px',
+    borderRadius: 8,
+    border: '1px solid var(--color-border)',
     background: 'transparent',
     color: 'var(--color-text-muted)',
-    border: '1px solid var(--color-border)',
+    fontSize: 13,
+    cursor: 'pointer',
+  },
+  removeButton: {
+    borderColor: 'var(--color-border)',
   },
   dangerButton: {
     background: 'var(--color-danger-strong)',

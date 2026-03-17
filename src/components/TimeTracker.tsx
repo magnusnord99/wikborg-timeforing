@@ -1,9 +1,25 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import {
+  Activity,
+  BellRing,
+  CalendarDays,
+  ChartColumn,
+  Clock3,
+  FolderKanban,
+  ListTodo,
+  LogOut,
+  Play,
+  Square,
+  TimerReset,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import type { Project, TimeEntry } from '../types'
 import { ProjectsList } from './ProjectsList'
 import { TimeLog } from './TimeLog'
 import { DailySummary } from './DailySummary'
+
+type PanelId = 'focus' | 'projects' | 'log' | 'summary'
 
 export function TimeTracker() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -13,18 +29,21 @@ export function TimeTracker() {
   const [loading, setLoading] = useState(true)
   const [notice, setNotice] = useState<{ type: 'error' | 'info'; text: string } | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [activePanel, setActivePanel] = useState<PanelId>('projects')
+  const [sessionNote, setSessionNote] = useState('')
 
   useEffect(() => {
-    fetchProjects()
+    void fetchProjects()
   }, [])
 
   useEffect(() => {
-    fetchEntries()
+    void fetchEntries()
   }, [selectedDate])
 
   useEffect(() => {
     if (!activeEntry) return
 
+    setActivePanel('focus')
     const interval = window.setInterval(() => {
       setNow(Date.now())
     }, 30000)
@@ -32,11 +51,12 @@ export function TimeTracker() {
     return () => window.clearInterval(interval)
   }, [activeEntry])
 
+  useEffect(() => {
+    setSessionNote(activeEntry?.description ?? '')
+  }, [activeEntry?.id, activeEntry?.description])
+
   async function fetchProjects() {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('name')
+    const { data, error } = await supabase.from('projects').select('*').order('name')
 
     if (error) {
       console.error('Feil ved henting av prosjekter:', error)
@@ -99,7 +119,7 @@ export function TimeTracker() {
       return
     }
 
-    setNotice(null)
+    setNotice({ type: 'info', text: 'Timer startet. Fokusmodus er aktiv.' })
     setNow(Date.now())
     setActiveEntry(data)
     setEntries((prev) => [data, ...prev])
@@ -120,9 +140,14 @@ export function TimeTracker() {
       return
     }
 
-    setNotice(null)
+    setNotice({ type: 'info', text: 'Timer stoppet.' })
     setActiveEntry(null)
-    fetchEntries()
+    await fetchEntries()
+  }
+
+  async function handleStopTimer() {
+    await saveSessionNote()
+    await stopTimer()
   }
 
   async function deleteEntry(id: string) {
@@ -135,14 +160,11 @@ export function TimeTracker() {
     }
 
     setNotice(null)
-    fetchEntries()
+    await fetchEntries()
   }
 
   async function updateEntry(id: string, updates: Partial<TimeEntry>) {
-    const { error } = await supabase
-      .from('time_entries')
-      .update(updates)
-      .eq('id', id)
+    const { error } = await supabase.from('time_entries').update(updates).eq('id', id)
 
     if (error) {
       console.error('Feil ved oppdatering:', error)
@@ -151,7 +173,7 @@ export function TimeTracker() {
     }
 
     setNotice(null)
-    fetchEntries()
+    await fetchEntries()
   }
 
   async function addProject(name: string) {
@@ -187,7 +209,27 @@ export function TimeTracker() {
 
     setNotice(null)
     setProjects((prev) => prev.filter((project) => project.id !== id))
-    fetchEntries()
+    await fetchEntries()
+  }
+
+  async function saveSessionNote() {
+    if (!activeEntry) return
+
+    const nextNote = sessionNote.trim()
+    if ((activeEntry.description ?? '') === nextNote) return
+
+    const { error } = await supabase
+      .from('time_entries')
+      .update({ description: nextNote || null })
+      .eq('id', activeEntry.id)
+
+    if (error) {
+      console.error('Feil ved lagring av notat:', error)
+      setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
+      return
+    }
+
+    setActiveEntry((prev) => (prev ? { ...prev, description: nextNote || null } : prev))
   }
 
   const completedEntries = entries.filter((entry) => entry.end_time)
@@ -197,136 +239,192 @@ export function TimeTracker() {
   )
   const activeProject = projects.find((project) => project.id === activeEntry?.project_id) ?? null
   const isToday = selectedDate === toDateString(new Date())
+  const activeMinutes = activeEntry
+    ? getMinutesBetween(activeEntry.start_time, new Date(now).toISOString())
+    : 0
 
-  return (
-    <div className="tracker-shell" style={styles.layout}>
-      <header className="tracker-header" style={styles.header}>
-        <div style={styles.titleWrap}>
-          <span style={styles.eyebrow}>Arbeidsdag</span>
-          <h1 style={styles.title}>Wikborg Tidsføring</h1>
-          <p style={styles.subtitle}>
-            {isToday
-              ? 'Start en timer, legg inn notater fortløpende og få dagsoversikten automatisk.'
-              : `Du ser historikken for ${formatDate(selectedDate)}.`}
-          </p>
-        </div>
-        <div style={styles.headerRight}>
-          <span style={styles.date}>{formatDate(selectedDate)}</span>
-          <button onClick={() => supabase.auth.signOut()} style={styles.logout}>
-            Logg ut
-          </button>
-        </div>
-      </header>
+  useEffect(() => {
+    if (activeEntry) {
+      const timerLabel = formatDigitalDuration(activeMinutes)
+      const projectLabel = activeProject?.name ? ` ${activeProject.name}` : ''
+      document.title = `● ${timerLabel}${projectLabel} | Wikborg Tidsføring`
+      return
+    }
 
-      <section style={styles.heroSection}>
-        <div className="tracker-stat-grid" style={styles.statsGrid}>
-          <div style={styles.statCard}>
-            <span style={styles.statLabel}>Aktiv status</span>
-            <strong style={styles.statValue}>
-              {activeEntry ? 'Timer kjører' : 'Ingen aktiv timer'}
-            </strong>
-            <span style={styles.statHint}>
-              {activeEntry && activeProject
-                ? `${activeProject.name} · ${formatHours(getMinutesBetween(activeEntry.start_time, new Date(now).toISOString()))}`
-                : 'Du kan ha én aktiv timer om gangen.'}
-            </span>
-          </div>
-          <div style={styles.statCard}>
-            <span style={styles.statLabel}>Ført tid</span>
-            <strong style={styles.statValue}>{formatHours(totalCompletedMinutes)}</strong>
-            <span style={styles.statHint}>Summerte ferdige registreringer for valgt dato.</span>
-          </div>
-          <div style={styles.statCard}>
-            <span style={styles.statLabel}>Registreringer</span>
-            <strong style={styles.statValue}>{entries.length}</strong>
-            <span style={styles.statHint}>
-              {completedEntries.length} fullført{completedEntries.length === 1 ? '' : 'e'} økter.
-            </span>
-          </div>
-        </div>
+    document.title = 'Wikborg Tidsføring'
+  }, [activeEntry, activeMinutes, activeProject?.name])
 
-        {notice && (
-          <div
-            style={{
-              ...styles.notice,
-              ...(notice.type === 'error' ? styles.noticeError : styles.noticeInfo),
-            }}
-          >
-            <span>{notice.text}</span>
-            <button type="button" onClick={() => setNotice(null)} style={styles.noticeDismiss}>
-              Lukk
-            </button>
-          </div>
-        )}
+  const navItems: Array<{ id: PanelId; label: string; icon: LucideIcon; meta: string }> = [
+    {
+      id: 'focus',
+      label: 'Fokus',
+      icon: TimerReset,
+      meta: activeEntry ? 'Aktiv økt' : 'Ingen økt',
+    },
+    {
+      id: 'projects',
+      label: 'Prosjekter',
+      icon: FolderKanban,
+      meta: `${projects.length}`,
+    },
+    {
+      id: 'log',
+      label: 'Timer',
+      icon: ListTodo,
+      meta: `${entries.length}`,
+    },
+    {
+      id: 'summary',
+      label: 'Oppsummering',
+      icon: ChartColumn,
+      meta: formatHours(totalCompletedMinutes),
+    },
+  ]
 
-        {activeEntry && activeProject && (
-          <div style={styles.activeCard}>
-            <div>
-              <span style={styles.activeBadge}>Aktiv timer</span>
-              <div style={styles.activeProjectName}>{activeProject.name}</div>
-              <div style={styles.activeMeta}>
-                Startet {formatTime(activeEntry.start_time)} ·{' '}
-                {formatHours(getMinutesBetween(activeEntry.start_time, new Date(now).toISOString()))}
+  function renderPanel() {
+    if (activePanel === 'focus') {
+      return (
+        <section style={styles.focusSection}>
+          {activeEntry && activeProject ? (
+            <div className="tracker-focus-grid" style={styles.focusGrid}>
+              <div style={styles.focusHero}>
+                <div style={styles.focusHeroTop}>
+                  <span style={styles.focusPill}>
+                    <Activity size={14} />
+                    Sesjon aktiv
+                  </span>
+                  <span style={styles.focusClock}>
+                    <Clock3 size={15} />
+                    Startet {formatTime(activeEntry.start_time)}
+                  </span>
+                </div>
+
+                <div style={styles.focusProjectRow}>
+                  <FolderKanban size={18} />
+                  <span>{activeProject.name}</span>
+                </div>
+
+                <div style={styles.focusTimer}>{formatDigitalDuration(activeMinutes)}</div>
+
+                <div style={styles.focusActions}>
+                  <button onClick={() => void handleStopTimer()} style={styles.stopAction}>
+                    <Square size={16} />
+                    <span>Stopp timer</span>
+                  </button>
+                  <button type="button" onClick={() => setActivePanel('log')} style={styles.secondaryActionWide}>
+                    <ListTodo size={16} />
+                    <span>Åpne timelogg</span>
+                  </button>
+                </div>
+
+                <label style={styles.noteLabel}>
+                  <span style={styles.noteLabelText}>Arbeidsnotat</span>
+                  <textarea
+                    value={sessionNote}
+                    onChange={(e) => setSessionNote(e.target.value)}
+                    onBlur={() => void saveSessionNote()}
+                    placeholder="Skriv kort hva du jobber med akkurat nå"
+                    style={styles.noteInput}
+                  />
+                </label>
+              </div>
+
+              <div style={styles.focusSide}>
+                <div style={styles.miniStatCard}>
+                  <span style={styles.miniStatLabel}>Ført i dag</span>
+                  <strong style={styles.miniStatValue}>{formatHours(totalCompletedMinutes)}</strong>
+                </div>
+                <div style={styles.miniStatCard}>
+                  <span style={styles.miniStatLabel}>Økter i dag</span>
+                  <strong style={styles.miniStatValue}>{entries.length}</strong>
+                </div>
+                <div style={styles.miniStatCard}>
+                  <span style={styles.miniStatLabel}>Fullført</span>
+                  <strong style={styles.miniStatValue}>{completedEntries.length}</strong>
+                </div>
+                <button type="button" onClick={() => setActivePanel('summary')} style={styles.secondaryGhostAction}>
+                  <ChartColumn size={16} />
+                  <span>Se oppsummering</span>
+                </button>
               </div>
             </div>
-            <button onClick={stopTimer} style={styles.primaryAction}>
-              Stopp timer
-            </button>
-          </div>
-        )}
-      </section>
+          ) : (
+            <div style={styles.idleFocusCard}>
+              <span style={styles.focusPillMuted}>
+                <Play size={14} />
+                Ingen aktiv timer
+              </span>
+              <h2 style={styles.idleFocusTitle}>Start fra prosjektlisten når du er klar</h2>
+              <p style={styles.idleFocusText}>
+                Fokusmodus blir automatisk aktiv når en økt starter. Da skjules resten av støyen.
+              </p>
+              <button type="button" onClick={() => setActivePanel('projects')} style={styles.primaryBlueAction}>
+                <FolderKanban size={16} />
+                <span>Gå til prosjekter</span>
+              </button>
+            </div>
+          )}
+        </section>
+      )
+    }
 
-      <main className="tracker-main" style={styles.main}>
-        <section className="tracker-panel tracker-panel--projects" style={styles.section}>
+    if (activePanel === 'projects') {
+      return (
+        <section style={styles.section}>
           <div style={styles.sectionHeader}>
             <div>
               <h2 style={styles.sectionTitle}>Prosjekter</h2>
-              <p style={styles.sectionDescription}>Start og stopp timer direkte fra listen.</p>
+              <p style={styles.sectionDescription}>Velg hvor du skal føre tid, og start direkte.</p>
             </div>
             <span style={styles.sectionMeta}>{projects.length} totalt</span>
           </div>
           <ProjectsList
             projects={projects}
-            onAdd={addProject}
-            onRemove={removeProject}
+            onAdd={(name) => void addProject(name)}
+            onRemove={(id) => void removeProject(id)}
             activeEntry={activeEntry}
-            onStart={startTimer}
-            onStop={stopTimer}
+            onStart={(projectId) => void startTimer(projectId)}
+            onStop={() => void handleStopTimer()}
           />
         </section>
+      )
+    }
 
-        <section className="tracker-panel tracker-panel--timelog" style={styles.section}>
+    if (activePanel === 'log') {
+      return (
+        <section style={styles.section}>
           <div style={styles.sectionHeader}>
             <div>
               <h2 style={styles.sectionTitle}>Timer</h2>
-              <p style={styles.sectionDescription}>
-                Bytt dato for å se historikk eller justere tidligere registreringer.
-              </p>
+              <p style={styles.sectionDescription}>Se og rediger registreringer for valgt dato.</p>
             </div>
             <div className="tracker-toolbar" style={styles.dateControls}>
               <button
                 type="button"
                 onClick={() => setSelectedDate(shiftDate(selectedDate, -1))}
-                style={styles.secondaryAction}
+                style={styles.secondaryActionWide}
               >
-                Forrige dag
+                <CalendarDays size={16} />
+                <span>Forrige dag</span>
               </button>
               {!isToday && (
                 <button
                   type="button"
                   onClick={() => setSelectedDate(toDateString(new Date()))}
-                  style={styles.secondaryAction}
+                  style={styles.secondaryActionWide}
                 >
-                  I dag
+                  <Clock3 size={16} />
+                  <span>I dag</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setSelectedDate(shiftDate(selectedDate, 1))}
                 disabled={selectedDate >= toDateString(new Date())}
-                style={styles.secondaryAction}
+                style={styles.secondaryActionWide}
               >
-                Neste dag
+                <CalendarDays size={16} />
+                <span>Neste dag</span>
               </button>
             </div>
           </div>
@@ -350,24 +448,123 @@ export function TimeTracker() {
               entries={entries}
               projects={projects}
               activeEntry={activeEntry}
-              onEdit={updateEntry}
-              onDelete={deleteEntry}
+              onEdit={(id, updates) => void updateEntry(id, updates)}
+              onDelete={(id) => void deleteEntry(id)}
               now={now}
             />
           )}
         </section>
+      )
+    }
 
-        <section className="tracker-panel tracker-panel--summary" style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <div>
-              <h2 style={styles.sectionTitle}>Oppsummering</h2>
-              <p style={styles.sectionDescription}>Fordeling av tiden du har ført for valgt dato.</p>
-            </div>
-            <span style={styles.sectionMeta}>{formatHours(totalCompletedMinutes)}</span>
+    return (
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <div>
+            <h2 style={styles.sectionTitle}>Oppsummering</h2>
+            <p style={styles.sectionDescription}>Se hvordan tiden fordeler seg på prosjekter.</p>
           </div>
-          <DailySummary entries={entries} projects={projects} />
-        </section>
-      </main>
+          <span style={styles.sectionMeta}>{formatHours(totalCompletedMinutes)}</span>
+        </div>
+        <DailySummary entries={entries} projects={projects} />
+      </section>
+    )
+  }
+
+  return (
+    <div className="tracker-shell" style={styles.layout}>
+      <div className="tracker-layout" style={styles.workspace}>
+        <aside className="tracker-rail" style={styles.rail}>
+          <div style={styles.railTop}>
+            <div style={styles.brandMark} title="Wikborg Tidsforing">
+              <Clock3 size={18} />
+            </div>
+          </div>
+
+          <nav className="tracker-nav" style={styles.nav}>
+            {navItems.map((item) => {
+              const Icon = item.icon
+              const isActive = activePanel === item.id
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActivePanel(item.id)}
+                  className={isActive ? 'tracker-nav-button tracker-nav-button--active' : 'tracker-nav-button'}
+                  style={styles.navButton}
+                  aria-label={item.label}
+                  title={`${item.label}: ${item.meta}`}
+                >
+                  <span style={styles.navIconWrap}>
+                    <Icon size={18} />
+                    {item.id === 'focus' && activeEntry && <span style={styles.liveDot} />}
+                  </span>
+                </button>
+              )
+            })}
+          </nav>
+
+          <div style={styles.railFooter}>
+            <button
+              type="button"
+              onClick={() => supabase.auth.signOut()}
+              style={styles.logoutRail}
+              aria-label="Logg ut"
+              title="Logg ut"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        </aside>
+
+        <div className="tracker-content-stack" style={styles.contentStack}>
+          <header className="tracker-header" style={styles.header}>
+            <div style={styles.titleWrap}>
+              <span style={styles.eyebrow}>{activeEntry ? 'Fokusmodus' : 'Arbeidsdag'}</span>
+              <h1 style={styles.title}>{activeEntry ? 'Timeren kjører' : 'Wikborg Tidsføring'}</h1>
+              <p style={styles.subtitle}>
+                {activeEntry
+                  ? 'Vis bare det du trenger mens du jobber. Resten ligger i menyen til venstre.'
+                  : isToday
+                    ? 'Velg prosjekt, start timer og hold oversikten uten å forlate siden.'
+                    : `Du ser historikken for ${formatDate(selectedDate)}.`}
+              </p>
+            </div>
+
+            <div style={styles.headerTools}>
+              <div style={styles.headerChip}>
+                <CalendarDays size={16} />
+                <span>{formatDate(selectedDate)}</span>
+              </div>
+              {activeEntry && (
+                <div style={styles.headerChipLive}>
+                  <Activity size={16} />
+                  <span>{formatHours(activeMinutes)}</span>
+                </div>
+              )}
+            </div>
+          </header>
+
+          {notice && (
+            <div
+              style={{
+                ...styles.notice,
+                ...(notice.type === 'error' ? styles.noticeError : styles.noticeInfo),
+              }}
+            >
+              <div style={styles.noticeContent}>
+                <BellRing size={16} />
+                <span>{notice.text}</span>
+              </div>
+              <button type="button" onClick={() => setNotice(null)} style={styles.noticeDismiss}>
+                Lukk
+              </button>
+            </div>
+          )}
+
+          {renderPanel()}
+        </div>
+      </div>
     </div>
   )
 }
@@ -413,23 +610,142 @@ function formatHours(minutes: number): string {
   return `${hours} t ${remainder} min`
 }
 
+function formatDigitalDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  return `${hours.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`
+}
+
 const styles: Record<string, React.CSSProperties> = {
   layout: {
     minHeight: '100vh',
-    maxWidth: 900,
-    margin: '0 auto',
-    padding: '32px 24px 48px',
+    width: '100%',
+    maxWidth: 'none',
+    margin: 0,
+    padding: '0 24px 32px 0',
+  },
+  workspace: {
+    display: 'grid',
+    gridTemplateColumns: '76px minmax(0, 1fr)',
+    gap: 24,
+    alignItems: 'start',
+  },
+  rail: {
+    position: 'sticky',
+    top: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 18,
+    alignItems: 'center',
+    padding: '18px 8px',
+    background: 'rgba(15, 23, 42, 0.86)',
+    border: '1px solid var(--color-elevated-border)',
+    borderLeft: 'none',
+    borderRadius: '0 22px 22px 0',
+    boxShadow: 'var(--shadow-soft)',
+    minHeight: '100vh',
+  },
+  railTop: {
+    display: 'flex',
+    justifyContent: 'center',
+    width: '100%',
+    paddingBottom: 10,
+    borderBottom: '1px solid rgba(148, 163, 184, 0.14)',
+  },
+  brandMark: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    display: 'grid',
+    placeItems: 'center',
+    background: 'rgba(59, 130, 246, 0.14)',
+    color: '#93c5fd',
+    flexShrink: 0,
+  },
+  railTitle: {
+    fontSize: 13,
+    fontWeight: 700,
+    lineHeight: 1.1,
+  },
+  railSubtitle: {
+    fontSize: 12,
+    color: 'var(--color-text-muted)',
+  },
+  nav: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    width: '100%',
+    alignItems: 'center',
+  },
+  navButton: {
+    width: 52,
+    height: 52,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    borderRadius: 14,
+    border: '1px solid transparent',
+    background: 'transparent',
+    color: 'var(--color-text)',
+    cursor: 'pointer',
+  },
+  navIconWrap: {
+    position: 'relative',
+    width: 34,
+    height: 34,
+    display: 'grid',
+    placeItems: 'center',
+    borderRadius: 12,
+    background: 'rgba(51, 65, 85, 0.44)',
+    flexShrink: 0,
+  },
+  liveDot: {
+    position: 'absolute',
+    right: 6,
+    top: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    background: '#22c55e',
+    boxShadow: '0 0 0 4px rgba(34, 197, 94, 0.16)',
+  },
+  railFooter: {
+    marginTop: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  logoutRail: {
+    width: 52,
+    height: 52,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    borderRadius: 14,
+    border: '1px solid var(--color-border)',
+    background: 'transparent',
+    color: 'var(--color-text-muted)',
+    cursor: 'pointer',
+  },
+  contentStack: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 18,
+    paddingTop: 24,
+    paddingRight: 8,
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 24,
-    flexWrap: 'wrap',
     gap: 16,
+    flexWrap: 'wrap',
   },
   titleWrap: {
-    maxWidth: 560,
+    maxWidth: 620,
   },
   eyebrow: {
     display: 'inline-block',
@@ -447,70 +763,37 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 32,
     fontWeight: 700,
+    lineHeight: 1.05,
   },
   subtitle: {
-    margin: '12px 0 0',
-    maxWidth: 560,
-    color: 'rgba(148, 163, 184, 0.9)',
+    margin: '10px 0 0',
+    color: 'rgba(148, 163, 184, 0.88)',
     lineHeight: 1.6,
   },
-  headerRight: {
+  headerTools: {
     display: 'flex',
-    alignItems: 'center',
+    gap: 10,
     flexWrap: 'wrap',
-    gap: 16,
   },
-  date: {
-    color: 'var(--color-text-muted)',
-    fontSize: 14,
-  },
-  logout: {
-    padding: '8px 16px',
-    background: 'transparent',
-    border: '1px solid var(--color-border)',
-    color: 'var(--color-text-muted)',
-    borderRadius: 8,
-    cursor: 'pointer',
-    fontSize: 14,
-  },
-  main: {
-    gap: 24,
-  },
-  heroSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 16,
-    marginBottom: 24,
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: 16,
-  },
-  statCard: {
-    display: 'flex',
-    flexDirection: 'column',
+  headerChip: {
+    display: 'inline-flex',
+    alignItems: 'center',
     gap: 8,
-    padding: 18,
-    background: 'var(--color-elevated)',
+    padding: '10px 12px',
+    borderRadius: 14,
+    background: 'var(--color-panel)',
     border: '1px solid var(--color-elevated-border)',
-    borderRadius: 16,
+    color: 'var(--color-text)',
   },
-  statLabel: {
-    color: 'var(--color-text-muted)',
-    fontSize: 12,
-    fontWeight: 700,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-  },
-  statValue: {
-    fontSize: 24,
-    lineHeight: 1.2,
-  },
-  statHint: {
-    color: 'rgba(148, 163, 184, 0.9)',
-    fontSize: 14,
-    lineHeight: 1.5,
+  headerChipLive: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '10px 12px',
+    borderRadius: 14,
+    background: 'rgba(34, 197, 94, 0.12)',
+    border: '1px solid rgba(34, 197, 94, 0.2)',
+    color: '#bbf7d0',
   },
   notice: {
     display: 'flex',
@@ -518,8 +801,13 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     gap: 16,
     padding: '14px 16px',
-    borderRadius: 12,
+    borderRadius: 14,
     border: '1px solid transparent',
+  },
+  noticeContent: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
   },
   noticeError: {
     background: 'rgba(127, 29, 29, 0.45)',
@@ -533,62 +821,202 @@ const styles: Record<string, React.CSSProperties> = {
   },
   noticeDismiss: {
     padding: '8px 12px',
-    borderRadius: 8,
+    borderRadius: 10,
     border: '1px solid var(--color-border)',
     background: 'transparent',
     color: 'var(--color-text-muted)',
     cursor: 'pointer',
-    flexShrink: 0,
   },
-  activeCard: {
+  focusSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 18,
+  },
+  focusGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(260px, 0.8fr)',
+    gap: 18,
+  },
+  focusHero: {
+    padding: 24,
+    borderRadius: 24,
+    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(15, 23, 42, 0.98))',
+    border: '1px solid rgba(96, 165, 250, 0.2)',
+    boxShadow: 'var(--shadow-soft)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 18,
+  },
+  focusHeroTop: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 20,
+    gap: 12,
     flexWrap: 'wrap',
-    padding: 20,
-    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(30, 41, 59, 0.92))',
-    border: '1px solid var(--color-accent-soft-strong)',
-    borderRadius: 18,
-    boxShadow: 'var(--shadow-soft)',
   },
-  activeBadge: {
-    display: 'inline-block',
-    marginBottom: 8,
-    padding: '6px 10px',
+  focusPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '7px 10px',
     borderRadius: 999,
-    background: 'rgba(5, 6, 9, 0.35)',
-    color: 'var(--color-text)',
+    background: 'rgba(34, 197, 94, 0.14)',
+    color: '#bbf7d0',
     fontSize: 12,
     fontWeight: 700,
-    letterSpacing: '0.05em',
-    textTransform: 'uppercase',
   },
-  activeProjectName: {
-    fontSize: 24,
+  focusPillMuted: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '7px 10px',
+    borderRadius: 999,
+    background: 'var(--color-accent-soft)',
+    color: '#bfdbfe',
+    fontSize: 12,
     fontWeight: 700,
   },
-  activeMeta: {
-    marginTop: 6,
-    color: 'rgba(191, 219, 254, 0.86)',
-    fontSize: 14,
+  focusClock: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    color: 'rgba(191, 219, 254, 0.82)',
+    fontSize: 13,
   },
-  primaryAction: {
-    padding: '12px 18px',
-    borderRadius: 10,
+  focusProjectRow: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 18,
+    fontWeight: 600,
+  },
+  focusTimer: {
+    fontSize: 72,
+    lineHeight: 1,
+    fontWeight: 800,
+    letterSpacing: '-0.06em',
+  },
+  focusActions: {
+    display: 'flex',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  stopAction: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '12px 16px',
+    borderRadius: 12,
     border: 'none',
     background: 'var(--color-danger)',
     color: 'white',
-    cursor: 'pointer',
     fontWeight: 700,
-    fontSize: 14,
+    cursor: 'pointer',
+  },
+  primaryBlueAction: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '12px 16px',
+    borderRadius: 12,
+    border: 'none',
+    background: 'var(--color-accent)',
+    color: 'white',
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  secondaryActionWide: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '10px 14px',
+    borderRadius: 12,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-input-bg)',
+    color: 'var(--color-text)',
+    cursor: 'pointer',
+  },
+  secondaryGhostAction: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: '12px 14px',
+    borderRadius: 12,
+    border: '1px solid var(--color-border)',
+    background: 'transparent',
+    color: 'var(--color-text)',
+    cursor: 'pointer',
+  },
+  noteLabel: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  },
+  noteLabelText: {
+    fontSize: 13,
+    color: 'rgba(191, 219, 254, 0.82)',
+    fontWeight: 600,
+  },
+  noteInput: {
+    minHeight: 110,
+    resize: 'vertical',
+    padding: 12,
+    borderRadius: 14,
+    border: '1px solid rgba(96, 165, 250, 0.18)',
+    background: 'rgba(15, 23, 42, 0.8)',
+    color: 'var(--color-text)',
+  },
+  focusSide: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+  miniStatCard: {
+    padding: '16px 18px',
+    borderRadius: 18,
+    background: 'var(--color-panel)',
+    border: '1px solid var(--color-elevated-border)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  miniStatLabel: {
+    fontSize: 12,
+    color: 'var(--color-text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  miniStatValue: {
+    fontSize: 24,
+    lineHeight: 1.1,
+  },
+  idleFocusCard: {
+    padding: 24,
+    borderRadius: 24,
+    background: 'var(--color-panel)',
+    border: '1px solid var(--color-elevated-border)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 14,
+    alignItems: 'flex-start',
+  },
+  idleFocusTitle: {
+    margin: 0,
+    fontSize: 28,
+    lineHeight: 1.1,
+  },
+  idleFocusText: {
+    margin: 0,
+    color: 'rgba(148, 163, 184, 0.88)',
+    maxWidth: 540,
   },
   section: {
     background: 'var(--color-panel)',
     border: '1px solid var(--color-border)',
     boxShadow: 'var(--shadow-soft)',
-    borderRadius: 18,
-    padding: 24,
+    borderRadius: 20,
+    padding: 22,
   },
   sectionHeader: {
     display: 'flex',
@@ -600,8 +1028,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   sectionTitle: {
     margin: 0,
-    fontSize: 18,
-    fontWeight: 600,
+    fontSize: 20,
+    fontWeight: 700,
   },
   sectionDescription: {
     margin: '6px 0 0',
@@ -622,15 +1050,6 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     flexWrap: 'wrap',
   },
-  secondaryAction: {
-    padding: '10px 14px',
-    borderRadius: 10,
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-input-bg)',
-    color: 'var(--color-text)',
-    cursor: 'pointer',
-    fontSize: 14,
-  },
   dateToolbar: {
     display: 'flex',
     alignItems: 'center',
@@ -640,9 +1059,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   dateInput: {
     padding: '10px 12px',
-    borderRadius: 8,
+    borderRadius: 10,
     border: '1px solid var(--color-border)',
-    background: 'rgba(5, 6, 9, 0.72)',
+    background: 'var(--color-input-bg)',
     color: 'var(--color-text)',
     fontSize: 14,
   },

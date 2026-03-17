@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { Check, Clock3, FileText, Pencil, Play, Trash2, X } from 'lucide-react'
 import type { Project, TimeEntry } from '../types'
 
 interface Props {
@@ -17,7 +18,10 @@ export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now 
   if (entries.length === 0) {
     return (
       <div style={styles.emptyState}>
-        <strong>Ingen timer registrert</strong>
+        <div style={styles.emptyTitle}>
+          <Clock3 size={18} />
+          <strong>Ingen timer registrert</strong>
+        </div>
         <p style={styles.emptyText}>
           Start en timer fra prosjektlisten, eller bytt dato for å se tidligere føringer.
         </p>
@@ -49,19 +53,31 @@ export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now 
                 <div style={styles.info}>
                   <div style={styles.headerRow}>
                     <span style={styles.project}>{project?.name ?? 'Ukjent'}</span>
-                    {isActive && <span style={styles.activeBadge}>Pågår</span>}
+                    {isActive && (
+                      <span style={styles.activeBadge}>
+                        <Play size={12} />
+                        <span>Pågår</span>
+                      </span>
+                    )}
                   </div>
+
                   <div style={styles.metaRow}>
                     <span style={styles.time}>
-                      {formatTime(entry.start_time)} – {entry.end_time ? formatTime(entry.end_time) : 'Nå'}
+                      <Clock3 size={14} />
+                      <span>
+                        {formatTime(entry.start_time)} – {entry.end_time ? formatTime(entry.end_time) : 'Nå'}
+                      </span>
                     </span>
-                    <span style={styles.duration}>
-                      {formatDuration(entry.start_time, entry.end_time ?? new Date(now).toISOString())}
-                    </span>
+                    <span style={styles.duration}>{formatDuration(entry.start_time, entry.end_time ?? new Date(now).toISOString())}</span>
                   </div>
+
                   {entry.description && !isActive && (
-                    <span style={styles.description}>{entry.description}</span>
+                    <span style={styles.description}>
+                      <FileText size={14} />
+                      <span>{entry.description}</span>
+                    </span>
                   )}
+
                   {isActive && (
                     <>
                       <span style={styles.inlineHint}>
@@ -75,10 +91,12 @@ export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now 
                     </>
                   )}
                 </div>
+
                 {!isActive && (
                   <div style={styles.actions}>
                     <button onClick={() => setEditingId(entry.id)} style={styles.editButton}>
-                      Rediger
+                      <Pencil size={15} />
+                      <span>Rediger</span>
                     </button>
                     {confirmDeleteId === entry.id ? (
                       <>
@@ -89,18 +107,18 @@ export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now 
                           }}
                           style={styles.confirmDeleteButton}
                         >
-                          Bekreft sletting
+                          <Check size={15} />
+                          <span>Bekreft</span>
                         </button>
                         <button onClick={() => setConfirmDeleteId(null)} style={styles.editButton}>
-                          Avbryt
+                          <X size={15} />
+                          <span>Avbryt</span>
                         </button>
                       </>
                     ) : (
-                      <button
-                        onClick={() => setConfirmDeleteId(entry.id)}
-                        style={styles.deleteButton}
-                      >
-                        Slett
+                      <button onClick={() => setConfirmDeleteId(entry.id)} style={styles.deleteButton}>
+                        <Trash2 size={15} />
+                        <span>Slett</span>
                       </button>
                     )}
                   </div>
@@ -210,10 +228,12 @@ function EditForm({
       />
       <div style={styles.editActions}>
         <button type="submit" style={styles.saveButton}>
-          Lagre
+          <Check size={15} />
+          <span>Lagre</span>
         </button>
         <button type="button" onClick={onCancel} style={styles.cancelButton}>
-          Avbryt
+          <X size={15} />
+          <span>Avbryt</span>
         </button>
       </div>
     </form>
@@ -262,6 +282,11 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'rgba(15, 23, 42, 0.44)',
     border: '1px dashed var(--color-elevated-border)',
   },
+  emptyTitle: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+  },
   emptyText: {
     margin: '8px 0 0',
     color: 'var(--color-text-muted)',
@@ -284,6 +309,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
   },
   activeBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
     padding: '4px 8px',
     borderRadius: 999,
     background: 'var(--color-accent-soft)',
@@ -298,6 +326,9 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
   },
   time: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
     fontSize: 14,
     color: 'var(--color-text-muted)',
   },
@@ -309,10 +340,12 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--color-input-bg)',
   },
   description: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
     fontSize: 14,
     color: 'var(--color-text-muted)',
     marginTop: 4,
-    fontStyle: 'italic',
   },
   inlineHint: {
     fontSize: 12,
@@ -327,7 +360,7 @@ const styles: Record<string, React.CSSProperties> = {
   commentInput: {
     flex: 1,
     padding: 8,
-    borderRadius: 6,
+    borderRadius: 8,
     border: '1px solid var(--color-border)',
     background: 'var(--color-input-bg)',
     color: 'var(--color-text)',
@@ -339,8 +372,11 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
   },
   editButton: {
-    padding: '6px 12px',
-    borderRadius: 6,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 12px',
+    borderRadius: 8,
     border: '1px solid var(--color-border)',
     background: 'transparent',
     color: 'var(--color-text-muted)',
@@ -348,8 +384,11 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   deleteButton: {
-    padding: '6px 12px',
-    borderRadius: 6,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 12px',
+    borderRadius: 8,
     border: 'none',
     background: 'var(--color-danger-soft)',
     color: 'var(--color-danger-text)',
@@ -357,8 +396,11 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   confirmDeleteButton: {
-    padding: '6px 12px',
-    borderRadius: 6,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 12px',
+    borderRadius: 8,
     border: 'none',
     background: 'var(--color-danger-strong)',
     color: 'white',
@@ -375,7 +417,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   select: {
     padding: 8,
-    borderRadius: 6,
+    borderRadius: 8,
     border: '1px solid var(--color-border)',
     background: 'var(--color-input-bg)',
     color: 'var(--color-text)',
@@ -383,7 +425,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   input: {
     padding: 8,
-    borderRadius: 6,
+    borderRadius: 8,
     border: '1px solid var(--color-border)',
     background: 'var(--color-input-bg)',
     color: 'var(--color-text)',
@@ -395,8 +437,11 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
   },
   saveButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
     padding: '8px 16px',
-    borderRadius: 6,
+    borderRadius: 8,
     border: 'none',
     background: 'var(--color-success)',
     color: 'white',
@@ -405,8 +450,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
   },
   cancelButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
     padding: '8px 16px',
-    borderRadius: 6,
+    borderRadius: 8,
     border: '1px solid var(--color-border)',
     background: 'transparent',
     color: 'var(--color-text-muted)',
