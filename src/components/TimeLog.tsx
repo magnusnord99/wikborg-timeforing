@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { Check, Clock3, FileText, Pencil, Play, Trash2, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import type { Project, TimeEntry } from '../types'
 
 interface Props {
@@ -8,31 +7,23 @@ interface Props {
   activeEntry: TimeEntry | null
   onEdit: (id: string, updates: Partial<TimeEntry>) => void
   onDelete: (id: string) => void
-  now: number
 }
 
-export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now }: Props) {
+export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   if (entries.length === 0) {
     return (
-      <div style={styles.emptyState}>
-        <div style={styles.emptyTitle}>
-          <Clock3 size={18} />
-          <strong>Ingen timer registrert</strong>
-        </div>
-        <p style={styles.emptyText}>
-          Start en timer fra prosjektlisten, eller bytt dato for å se tidligere føringer.
-        </p>
-      </div>
+      <p style={{ color: '#94a3b8', margin: 0 }}>
+        Ingen timer logget i dag. Start en timer fra prosjektlisten over.
+      </p>
     )
   }
 
   return (
     <ul style={styles.list}>
       {entries.map((entry) => {
-        const project = projects.find((item) => item.id === entry.project_id)
+        const project = projects.find((p) => p.id === entry.project_id)
         const isActive = activeEntry?.id === entry.id
         const isEditing = editingId === entry.id
 
@@ -51,80 +42,41 @@ export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now 
             ) : (
               <>
                 <div style={styles.info}>
-                  <div style={styles.headerRow}>
-                    <span style={styles.project}>{project?.name ?? 'Ukjent'}</span>
-                    {isActive && (
-                      <span style={styles.activeBadge}>
-                        <Play size={12} />
-                        <span>Pågår</span>
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={styles.metaRow}>
-                    <span style={styles.time}>
-                      <Clock3 size={14} />
-                      <span>
-                        {formatTime(entry.start_time)} – {entry.end_time ? formatTime(entry.end_time) : 'Nå'}
-                      </span>
-                    </span>
+                  <span style={styles.project}>{project?.name ?? 'Ukjent'}</span>
+                  <span style={styles.time}>
+                    {formatTime(entry.start_time)} –{' '}
+                    {entry.end_time ? formatTime(entry.end_time) : 'Pågår...'}
+                  </span>
+                  {entry.end_time && (
                     <span style={styles.duration}>
-                      {isActive
-                        ? formatLiveDuration(entry.start_time, entry.end_time ?? new Date(now).toISOString())
-                        : formatDuration(entry.start_time, entry.end_time ?? new Date(now).toISOString())}
-                    </span>
-                  </div>
-
-                  {entry.description && !isActive && (
-                    <span style={styles.description}>
-                      <FileText size={14} />
-                      <span>{entry.description}</span>
+                      ({formatDuration(entry.start_time, entry.end_time)})
                     </span>
                   )}
-
+                  {entry.description && !isActive && (
+                    <span style={styles.description}>{entry.description}</span>
+                  )}
                   {isActive && (
-                    <>
-                      <span style={styles.inlineHint}>
-                        Kommentar lagres automatisk når du klikker ut av feltet.
-                      </span>
-                      <CommentInput
-                        value={entry.description ?? ''}
-                        onSave={(desc) => onEdit(entry.id, { description: desc || null })}
-                        placeholder="Hva jobber du med akkurat nå?"
-                      />
-                    </>
+                    <CommentInput
+                      value={entry.description ?? ''}
+                      onSave={(desc) => onEdit(entry.id, { description: desc || null })}
+                      placeholder="Hva jobber du med? (valgfritt)"
+                    />
                   )}
                 </div>
-
                 {!isActive && (
                   <div style={styles.actions}>
-                    <button onClick={() => setEditingId(entry.id)} style={styles.editButton}>
-                      <Pencil size={15} />
-                      <span>Rediger</span>
+                    <button
+                      onClick={() => setEditingId(entry.id)}
+                      style={styles.editButton}
+                    >
+                      Rediger
                     </button>
-                    {confirmDeleteId === entry.id ? (
-                      <>
-                        <button
-                          onClick={() => {
-                            onDelete(entry.id)
-                            setConfirmDeleteId(null)
-                          }}
-                          style={styles.confirmDeleteButton}
-                        >
-                          <Check size={15} />
-                          <span>Bekreft</span>
-                        </button>
-                        <button onClick={() => setConfirmDeleteId(null)} style={styles.editButton}>
-                          <X size={15} />
-                          <span>Avbryt</span>
-                        </button>
-                      </>
-                    ) : (
-                      <button onClick={() => setConfirmDeleteId(entry.id)} style={styles.deleteButton}>
-                        <Trash2 size={15} />
-                        <span>Slett</span>
-                      </button>
-                    )}
+                    <button
+                      onClick={() => onDelete(entry.id)}
+                      style={styles.deleteButton}
+                    >
+                      Slett
+                    </button>
                   </div>
                 )}
               </>
@@ -137,9 +89,9 @@ export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now 
 }
 
 function toDatetimeLocal(iso: string): string {
-  const date = new Date(iso)
-  const pad = (value: number) => value.toString().padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  const d = new Date(iso)
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function CommentInput({
@@ -148,11 +100,10 @@ function CommentInput({
   placeholder,
 }: {
   value: string
-  onSave: (value: string) => void
+  onSave: (v: string) => void
   placeholder: string
 }) {
   const [local, setLocal] = useState(value)
-
   useEffect(() => setLocal(value), [value])
 
   function handleBlur() {
@@ -210,10 +161,14 @@ function EditForm({
         onChange={(e) => setDescription(e.target.value)}
         style={styles.input}
       />
-      <select value={projectId} onChange={(e) => setProjectId(e.target.value)} style={styles.select}>
-        {projects.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.name}
+      <select
+        value={projectId}
+        onChange={(e) => setProjectId(e.target.value)}
+        style={styles.select}
+      >
+        {projects.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
           </option>
         ))}
       </select>
@@ -232,12 +187,10 @@ function EditForm({
       />
       <div style={styles.editActions}>
         <button type="submit" style={styles.saveButton}>
-          <Check size={15} />
-          <span>Lagre</span>
+          Lagre
         </button>
         <button type="button" onClick={onCancel} style={styles.cancelButton}>
-          <X size={15} />
-          <span>Avbryt</span>
+          Avbryt
         </button>
       </div>
     </form>
@@ -252,24 +205,12 @@ function formatTime(iso: string): string {
 }
 
 function formatDuration(start: string, end: string): string {
-  const startMs = new Date(start).getTime()
-  const endMs = new Date(end).getTime()
-  const minutes = Math.round((endMs - startMs) / 60000)
-  const hours = Math.floor(minutes / 60)
-  const remainder = minutes % 60
-  return hours > 0 ? `${hours} t ${remainder} min` : `${remainder} min`
-}
-
-function formatLiveDuration(start: string, end: string): string {
-  const startMs = new Date(start).getTime()
-  const endMs = new Date(end).getTime()
-  const totalSeconds = Math.max(0, Math.floor((endMs - startMs) / 1000))
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds
-    .toString()
-    .padStart(2, '0')}`
+  const s = new Date(start).getTime()
+  const e = new Date(end).getTime()
+  const mins = Math.round((e - s) / 60000)
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return h > 0 ? `${h}t ${m}m` : `${m}m`
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -277,98 +218,40 @@ const styles: Record<string, React.CSSProperties> = {
     listStyle: 'none',
     margin: 0,
     padding: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
   },
   item: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '16px',
-    background: 'var(--color-elevated)',
-    border: '1px solid var(--color-elevated-border)',
-    borderRadius: 14,
+    padding: '12px 0',
+    borderBottom: '1px solid #334155',
     flexWrap: 'wrap',
-    gap: 12,
-  },
-  emptyState: {
-    padding: 18,
-    borderRadius: 14,
-    background: 'rgba(15, 23, 42, 0.44)',
-    border: '1px dashed var(--color-elevated-border)',
-  },
-  emptyTitle: {
-    display: 'inline-flex',
-    alignItems: 'center',
     gap: 8,
-  },
-  emptyText: {
-    margin: '8px 0 0',
-    color: 'var(--color-text-muted)',
-    lineHeight: 1.5,
   },
   info: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 6,
-    flex: 1,
-    minWidth: 220,
-  },
-  headerRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    flexWrap: 'wrap',
+    gap: 2,
   },
   project: {
     fontWeight: 600,
   },
-  activeBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '4px 8px',
-    borderRadius: 999,
-    background: 'var(--color-accent-soft)',
-    color: 'var(--color-text)',
-    fontSize: 12,
-    fontWeight: 700,
-  },
-  metaRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
   time: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
     fontSize: 14,
-    color: 'var(--color-text-muted)',
+    color: '#94a3b8',
   },
   duration: {
     fontSize: 13,
-    color: 'var(--color-text)',
-    padding: '4px 8px',
-    borderRadius: 999,
-    background: 'var(--color-input-bg)',
+    color: '#64748b',
   },
   description: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
     fontSize: 14,
-    color: 'var(--color-text-muted)',
+    color: '#94a3b8',
     marginTop: 4,
-  },
-  inlineHint: {
-    fontSize: 12,
-    color: 'rgba(148, 163, 184, 0.82)',
+    fontStyle: 'italic',
   },
   commentInputWrap: {
-    marginTop: 4,
+    marginTop: 8,
     display: 'flex',
     alignItems: 'center',
     gap: 8,
@@ -376,52 +259,32 @@ const styles: Record<string, React.CSSProperties> = {
   commentInput: {
     flex: 1,
     padding: 8,
-    borderRadius: 8,
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-input-bg)',
-    color: 'var(--color-text)',
+    borderRadius: 6,
+    border: '1px solid #334155',
+    background: '#0f172a',
+    color: '#e2e8f0',
     fontSize: 14,
   },
   actions: {
     display: 'flex',
     gap: 8,
-    flexWrap: 'wrap',
   },
   editButton: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '8px 12px',
-    borderRadius: 8,
-    border: '1px solid var(--color-border)',
+    padding: '6px 12px',
+    borderRadius: 6,
+    border: '1px solid #475569',
     background: 'transparent',
-    color: 'var(--color-text-muted)',
+    color: '#94a3b8',
     fontSize: 13,
     cursor: 'pointer',
   },
   deleteButton: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '8px 12px',
-    borderRadius: 8,
+    padding: '6px 12px',
+    borderRadius: 6,
     border: 'none',
-    background: 'var(--color-danger-soft)',
-    color: 'var(--color-danger-text)',
+    background: '#7f1d1d',
+    color: '#fca5a5',
     fontSize: 13,
-    cursor: 'pointer',
-  },
-  confirmDeleteButton: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '8px 12px',
-    borderRadius: 8,
-    border: 'none',
-    background: 'var(--color-danger-strong)',
-    color: 'white',
-    fontSize: 13,
-    fontWeight: 700,
     cursor: 'pointer',
   },
   editForm: {
@@ -429,51 +292,43 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: 12,
     width: '100%',
-    padding: 4,
   },
   select: {
     padding: 8,
-    borderRadius: 8,
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-input-bg)',
-    color: 'var(--color-text)',
+    borderRadius: 6,
+    border: '1px solid #334155',
+    background: '#0f172a',
+    color: '#e2e8f0',
     fontSize: 14,
   },
   input: {
     padding: 8,
-    borderRadius: 8,
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-input-bg)',
-    color: 'var(--color-text)',
+    borderRadius: 6,
+    border: '1px solid #334155',
+    background: '#0f172a',
+    color: '#e2e8f0',
     fontSize: 14,
   },
   editActions: {
     display: 'flex',
     gap: 8,
-    flexWrap: 'wrap',
   },
   saveButton: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
     padding: '8px 16px',
-    borderRadius: 8,
+    borderRadius: 6,
     border: 'none',
-    background: 'var(--color-success)',
+    background: '#22c55e',
     color: 'white',
     fontWeight: 600,
     cursor: 'pointer',
     fontSize: 14,
   },
   cancelButton: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
     padding: '8px 16px',
-    borderRadius: 8,
-    border: '1px solid var(--color-border)',
+    borderRadius: 6,
+    border: '1px solid #475569',
     background: 'transparent',
-    color: 'var(--color-text-muted)',
+    color: '#94a3b8',
     cursor: 'pointer',
     fontSize: 14,
   },
