@@ -68,7 +68,11 @@ export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now 
                         {formatTime(entry.start_time)} – {entry.end_time ? formatTime(entry.end_time) : 'Nå'}
                       </span>
                     </span>
-                    <span style={styles.duration}>{formatDuration(entry.start_time, entry.end_time ?? new Date(now).toISOString())}</span>
+                    <span style={styles.duration}>
+                      {isActive
+                        ? formatLiveDuration(entry.start_time, entry.end_time ?? new Date(now).toISOString())
+                        : formatDuration(entry.start_time, entry.end_time ?? new Date(now).toISOString())}
+                    </span>
                   </div>
 
                   {entry.description && !isActive && (
@@ -254,6 +258,18 @@ function formatDuration(start: string, end: string): string {
   const hours = Math.floor(minutes / 60)
   const remainder = minutes % 60
   return hours > 0 ? `${hours} t ${remainder} min` : `${remainder} min`
+}
+
+function formatLiveDuration(start: string, end: string): string {
+  const startMs = new Date(start).getTime()
+  const endMs = new Date(end).getTime()
+  const totalSeconds = Math.max(0, Math.floor((endMs - startMs) / 1000))
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds
+    .toString()
+    .padStart(2, '0')}`
 }
 
 const styles: Record<string, React.CSSProperties> = {

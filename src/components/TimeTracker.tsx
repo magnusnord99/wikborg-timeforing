@@ -44,9 +44,10 @@ export function TimeTracker() {
     if (!activeEntry) return
 
     setActivePanel('focus')
+    setNow(Date.now())
     const interval = window.setInterval(() => {
       setNow(Date.now())
-    }, 30000)
+    }, 1000)
 
     return () => window.clearInterval(interval)
   }, [activeEntry])
@@ -239,20 +240,20 @@ export function TimeTracker() {
   )
   const activeProject = projects.find((project) => project.id === activeEntry?.project_id) ?? null
   const isToday = selectedDate === toDateString(new Date())
-  const activeMinutes = activeEntry
-    ? getMinutesBetween(activeEntry.start_time, new Date(now).toISOString())
+  const activeSeconds = activeEntry
+    ? getSecondsBetween(activeEntry.start_time, new Date(now).toISOString())
     : 0
+  const activeDurationLabel = formatDigitalDuration(activeSeconds)
 
   useEffect(() => {
     if (activeEntry) {
-      const timerLabel = formatDigitalDuration(activeMinutes)
       const projectLabel = activeProject?.name ? ` ${activeProject.name}` : ''
-      document.title = `● ${timerLabel}${projectLabel} | Wikborg Tidsføring`
+      document.title = `● ${activeDurationLabel}${projectLabel} | Wikborg Tidsføring`
       return
     }
 
     document.title = 'Wikborg Tidsføring'
-  }, [activeEntry, activeMinutes, activeProject?.name])
+  }, [activeDurationLabel, activeEntry, activeProject?.name])
 
   const navItems: Array<{ id: PanelId; label: string; icon: LucideIcon; meta: string }> = [
     {
@@ -304,7 +305,7 @@ export function TimeTracker() {
                   <span>{activeProject.name}</span>
                 </div>
 
-                <div style={styles.focusTimer}>{formatDigitalDuration(activeMinutes)}</div>
+                <div style={styles.focusTimer}>{activeDurationLabel}</div>
 
                 <div style={styles.focusActions}>
                   <button onClick={() => void handleStopTimer()} style={styles.stopAction}>
@@ -539,7 +540,7 @@ export function TimeTracker() {
               {activeEntry && (
                 <div style={styles.headerChipLive}>
                   <Activity size={16} />
-                  <span>{formatHours(activeMinutes)}</span>
+                  <span>{activeDurationLabel}</span>
                 </div>
               )}
             </div>
@@ -581,6 +582,12 @@ function getMinutesBetween(start: string, end: string): number {
   return Math.max(0, Math.round((endMs - startMs) / 60000))
 }
 
+function getSecondsBetween(start: string, end: string): number {
+  const startMs = new Date(start).getTime()
+  const endMs = new Date(end).getTime()
+  return Math.max(0, Math.floor((endMs - startMs) / 1000))
+}
+
 function toDateString(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
@@ -610,10 +617,13 @@ function formatHours(minutes: number): string {
   return `${hours} t ${remainder} min`
 }
 
-function formatDigitalDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60)
-  const remainder = minutes % 60
-  return `${hours.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`
+function formatDigitalDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds
+    .toString()
+    .padStart(2, '0')}`
 }
 
 const styles: Record<string, React.CSSProperties> = {
