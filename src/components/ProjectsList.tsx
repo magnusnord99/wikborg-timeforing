@@ -24,11 +24,10 @@ export function ProjectsList({
   const [newName, setNewName] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
-  function handleAdd(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  function handleAdd(e: FormEvent) {
+    e.preventDefault()
     const name = newName.trim()
     if (!name) return
-
     onAdd(name)
     setNewName('')
   }
@@ -40,7 +39,7 @@ export function ProjectsList({
           type="text"
           placeholder="Nytt prosjekt, klient eller sak"
           value={newName}
-          onChange={(event) => setNewName(event.target.value)}
+          onChange={(e) => setNewName(e.target.value)}
           style={styles.input}
         />
         <button type="submit" disabled={!newName.trim()} style={styles.addButton}>

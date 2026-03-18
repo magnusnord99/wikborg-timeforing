@@ -33,7 +33,7 @@ export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now 
   return (
     <ul style={styles.list}>
       {entries.map((entry) => {
-        const project = projects.find((item) => item.id === entry.project_id)
+        const project = projects.find((p) => p.id === entry.project_id)
         const isActive = activeEntry?.id === entry.id
         const isEditing = editingId === entry.id
 
