@@ -58,6 +58,7 @@ export function TimeTracker() {
   if (tracker.activePanel === 'focus') {
     panel = (
       <FocusPanel
+        projects={tracker.projects}
         activeEntry={tracker.activeEntry}
         activeProject={activeProject}
         activeDurationLabel={activeDurationLabel}
@@ -67,10 +68,10 @@ export function TimeTracker() {
         sessionNote={tracker.sessionNote}
         onSessionNoteChange={tracker.setSessionNote}
         onSaveSessionNote={() => void tracker.saveSessionNote()}
+        onStartTimer={(id) => void tracker.startTimer(id)}
         onStopTimer={() => void tracker.handleStopTimer()}
         onOpenLog={() => tracker.setActivePanel('log')}
         onOpenSummary={() => tracker.setActivePanel('summary')}
-        onOpenProjects={() => tracker.setActivePanel('projects')}
       />
     )
   } else if (tracker.activePanel === 'projects') {
