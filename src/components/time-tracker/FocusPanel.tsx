@@ -4,6 +4,7 @@ import { IdleFocusView } from './IdleFocusView'
 import { styles } from './timeTrackerStyles'
 
 interface Props {
+  projects: Project[]
   activeEntry: TimeEntry | null
   activeProject: Project | null
   activeDurationLabel: string
@@ -13,13 +14,14 @@ interface Props {
   sessionNote: string
   onSessionNoteChange: (value: string) => void
   onSaveSessionNote: () => void
+  onStartTimer: (projectId: string) => void
   onStopTimer: () => void
   onOpenLog: () => void
   onOpenSummary: () => void
-  onOpenProjects: () => void
 }
 
 export function FocusPanel({
+  projects,
   activeEntry,
   activeProject,
   activeDurationLabel,
@@ -29,10 +31,10 @@ export function FocusPanel({
   sessionNote,
   onSessionNoteChange,
   onSaveSessionNote,
+  onStartTimer,
   onStopTimer,
   onOpenLog,
   onOpenSummary,
-  onOpenProjects,
 }: Props) {
   return (
     <section style={styles.focusSection}>
@@ -52,7 +54,7 @@ export function FocusPanel({
           onOpenSummary={onOpenSummary}
         />
       ) : (
-        <IdleFocusView onOpenProjects={onOpenProjects} />
+        <IdleFocusView projects={projects} onStartTimer={onStartTimer} />
       )}
     </section>
   )
