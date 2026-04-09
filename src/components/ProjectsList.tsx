@@ -1,5 +1,8 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
+import { FolderKanban, Plus } from 'lucide-react'
 import type { Project, TimeEntry } from '../types'
+import { ProjectCard } from './projects-list/ProjectCard'
+import { styles } from './projects-list/projectsListStyles'
 
 interface Props {
   projects: Project[]
@@ -21,7 +24,7 @@ export function ProjectsList({
   const [newName, setNewName] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
-  function handleAdd(e: React.FormEvent) {
+  function handleAdd(e: FormEvent) {
     e.preventDefault()
     const name = newName.trim()
     if (!name) return
@@ -34,134 +37,51 @@ export function ProjectsList({
       <form onSubmit={handleAdd} style={styles.addForm}>
         <input
           type="text"
-          placeholder="Nytt prosjekt"
+          placeholder="Nytt prosjekt, klient eller sak"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           style={styles.input}
         />
-        <button type="submit" style={styles.addButton}>
-          Legg til
+        <button type="submit" disabled={!newName.trim()} style={styles.addButton}>
+          <Plus size={16} />
+          <span>Legg til</span>
         </button>
       </form>
 
+      <p style={styles.helperText}>
+        {activeEntry
+          ? 'Du har en aktiv timer. Stopp den før du starter en ny.'
+          : 'Velg prosjektet du faktisk skal føre på, så holder fokusvisningen seg ren.'}
+      </p>
+
+      {projects.length === 0 && (
+        <div style={styles.emptyState}>
+          <div style={styles.emptyTitle}>
+            <FolderKanban size={18} />
+            <strong>Ingen prosjekter ennå</strong>
+          </div>
+          <p style={styles.emptyText}>Opprett det første prosjektet ditt for å kunne starte en timer.</p>
+        </div>
+      )}
+
       <ul style={styles.list}>
-        {projects.map((project) => {
-          const isActive = activeEntry?.project_id === project.id
-          return (
-            <li key={project.id} style={styles.item}>
-              <span style={styles.projectName}>{project.name}</span>
-              <div style={styles.actions}>
-                {isActive ? (
-                  <button
-                    onClick={onStop}
-                    style={{ ...styles.button, ...styles.stopButton }}
-                  >
-                    Stopp
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => onStart(project.id)}
-                    disabled={!!activeEntry}
-                    style={styles.button}
-                  >
-                    Start
-                  </button>
-                )}
-                {confirmDelete === project.id ? (
-                  <>
-                    <button
-                      onClick={() => onRemove(project.id)}
-                      style={{ ...styles.button, ...styles.dangerButton }}
-                    >
-                      Bekreft
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(null)}
-                      style={styles.button}
-                    >
-                      Avbryt
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setConfirmDelete(project.id)}
-                    style={{ ...styles.button, ...styles.removeButton }}
-                  >
-                    Fjern
-                  </button>
-                )}
-              </div>
-            </li>
-          )
-        })}
+        {projects.map((project) => (
+          <ProjectCard
+            key={project.id}
+            project={project}
+            activeEntry={activeEntry}
+            confirmDelete={confirmDelete === project.id}
+            onStart={() => onStart(project.id)}
+            onStop={onStop}
+            onRequestDelete={() => setConfirmDelete(project.id)}
+            onCancelDelete={() => setConfirmDelete(null)}
+            onRemove={() => {
+              onRemove(project.id)
+              setConfirmDelete(null)
+            }}
+          />
+        ))}
       </ul>
     </div>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  addForm: {
-    display: 'flex',
-    gap: 8,
-    marginBottom: 16,
-  },
-  input: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 8,
-    border: '1px solid #334155',
-    background: '#0f172a',
-    color: '#e2e8f0',
-    fontSize: 14,
-  },
-  addButton: {
-    padding: '10px 16px',
-    borderRadius: 8,
-    border: 'none',
-    background: '#22c55e',
-    color: 'white',
-    fontWeight: 600,
-    cursor: 'pointer',
-    fontSize: 14,
-  },
-  list: {
-    listStyle: 'none',
-    margin: 0,
-    padding: 0,
-  },
-  item: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '12px 0',
-    borderBottom: '1px solid #334155',
-    gap: 12,
-  },
-  projectName: {
-    flex: 1,
-  },
-  actions: {
-    display: 'flex',
-    gap: 8,
-  },
-  button: {
-    padding: '6px 12px',
-    borderRadius: 6,
-    border: 'none',
-    background: '#3b82f6',
-    color: 'white',
-    fontSize: 13,
-    cursor: 'pointer',
-  },
-  stopButton: {
-    background: '#ef4444',
-  },
-  removeButton: {
-    background: 'transparent',
-    color: '#94a3b8',
-    border: '1px solid #475569',
-  },
-  dangerButton: {
-    background: '#dc2626',
-  },
 }

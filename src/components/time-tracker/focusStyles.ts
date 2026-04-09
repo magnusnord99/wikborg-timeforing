@@ -1,0 +1,78 @@
+import type { CSSProperties } from 'react'
+
+export const focusStyles: Record<string, CSSProperties> = {
+  focusSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 18,
+  },
+  focusGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(260px, 0.8fr)',
+    gap: 18,
+  },
+  focusHero: {
+    padding: 24,
+    borderRadius: 24,
+    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(15, 23, 42, 0.98))',
+    border: '1px solid rgba(96, 165, 250, 0.2)',
+    boxShadow: 'var(--shadow-soft)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 18,
+  },
+  focusHeroTop: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  focusPill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '7px 10px',
+    borderRadius: 999,
+    background: 'rgba(34, 197, 94, 0.14)',
+    color: '#bbf7d0',
+    fontSize: 12,
+    fontWeight: 700,
+  },
+  focusPillMuted: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '7px 10px',
+    borderRadius: 999,
+    background: 'var(--color-accent-soft)',
+    color: '#bfdbfe',
+    fontSize: 12,
+    fontWeight: 700,
+  },
+  focusClock: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    color: 'rgba(191, 219, 254, 0.82)',
+    fontSize: 13,
+  },
+  focusProjectRow: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 18,
+    fontWeight: 600,
+  },
+  focusTimer: {
+    fontSize: 72,
+    lineHeight: 1,
+    fontWeight: 800,
+    letterSpacing: '-0.06em',
+  },
+  focusActions: {
+    display: 'flex',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+}
