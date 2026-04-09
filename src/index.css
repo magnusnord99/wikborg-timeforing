@@ -85,6 +85,37 @@ textarea:focus-visible {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
 }
 
+/* ── Shell & layout ── */
+
+.tracker-shell {
+  padding: 0 24px 32px 0;
+}
+
+.tracker-rail {
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  border-left: none;
+  border-radius: 0 22px 22px 0;
+}
+
+.tracker-content-stack {
+  padding-top: 24px;
+  padding-right: 8px;
+}
+
+/* ── Responsive text ── */
+
+.tracker-title {
+  font-size: 32px;
+}
+
+.focus-timer {
+  font-size: 72px;
+}
+
+/* ── Grid layouts ── */
+
 .tracker-main {
   display: grid;
   grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
@@ -154,7 +185,13 @@ textarea:focus-visible {
   grid-column: 1;
 }
 
+/* ── Tablet (≤ 900px) ── */
+
 @media (max-width: 900px) {
+  .tracker-shell {
+    padding: 16px;
+  }
+
   .tracker-layout {
     grid-template-columns: 1fr;
   }
@@ -166,6 +203,8 @@ textarea:focus-visible {
   .tracker-rail {
     position: static;
     min-height: auto;
+    border-left: 1px solid var(--color-elevated-border);
+    border-radius: 16px;
   }
 
   .tracker-nav {
@@ -173,6 +212,16 @@ textarea:focus-visible {
     overflow-x: auto;
     padding-bottom: 2px;
     justify-content: flex-start;
+  }
+
+  .tracker-nav-button--active::before {
+    /* Fjern venstre-indikatoren når nav er horisontal */
+    display: none;
+  }
+
+  .tracker-content-stack {
+    padding-top: 0;
+    padding-right: 0;
   }
 
   .tracker-focus-grid {
@@ -189,11 +238,21 @@ textarea:focus-visible {
   .tracker-stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .tracker-title {
+    font-size: 24px;
+  }
+
+  .focus-timer {
+    font-size: 48px;
+  }
 }
+
+/* ── Mobil (≤ 640px) ── */
 
 @media (max-width: 640px) {
   .tracker-shell {
-    padding-right: 16px;
+    padding: 12px;
   }
 
   .tracker-header,
@@ -208,5 +267,13 @@ textarea:focus-visible {
 
   .tracker-stat-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tracker-title {
+    font-size: 20px;
+  }
+
+  .focus-timer {
+    font-size: 40px;
   }
 }

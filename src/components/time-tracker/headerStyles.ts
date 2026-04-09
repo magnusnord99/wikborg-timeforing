@@ -25,7 +25,6 @@ export const headerStyles: Record<string, CSSProperties> = {
   },
   title: {
     margin: 0,
-    fontSize: 32,
     fontWeight: 700,
     lineHeight: 1.05,
   },

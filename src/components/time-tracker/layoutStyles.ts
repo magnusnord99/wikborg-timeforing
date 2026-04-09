@@ -6,7 +6,6 @@ export const layoutStyles: Record<string, CSSProperties> = {
     width: '100%',
     maxWidth: 'none',
     margin: 0,
-    padding: '0 24px 32px 0',
   },
   workspace: {
     display: 'grid',
@@ -15,8 +14,6 @@ export const layoutStyles: Record<string, CSSProperties> = {
     alignItems: 'start',
   },
   rail: {
-    position: 'sticky',
-    top: 0,
     display: 'flex',
     flexDirection: 'column',
     gap: 18,
@@ -24,10 +21,7 @@ export const layoutStyles: Record<string, CSSProperties> = {
     padding: '18px 8px',
     background: 'rgba(15, 23, 42, 0.86)',
     border: '1px solid var(--color-elevated-border)',
-    borderLeft: 'none',
-    borderRadius: '0 22px 22px 0',
     boxShadow: 'var(--shadow-soft)',
-    minHeight: '100vh',
   },
   railTop: {
     display: 'flex',
@@ -109,7 +103,5 @@ export const layoutStyles: Record<string, CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 18,
-    paddingTop: 24,
-    paddingRight: 8,
   },
 }
