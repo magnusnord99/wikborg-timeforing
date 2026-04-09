@@ -65,7 +65,6 @@ export const focusStyles: Record<string, CSSProperties> = {
     fontWeight: 600,
   },
   focusTimer: {
-    fontSize: 72,
     lineHeight: 1,
     fontWeight: 800,
     letterSpacing: '-0.06em',

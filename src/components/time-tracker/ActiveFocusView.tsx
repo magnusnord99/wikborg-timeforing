@@ -51,7 +51,7 @@ export function ActiveFocusView({
           <span>{activeProject.name}</span>
         </div>
 
-        <div style={styles.focusTimer}>{activeDurationLabel}</div>
+        <div className="focus-timer" style={styles.focusTimer}>{activeDurationLabel}</div>
 
         <div style={styles.focusActions}>
           <button type="button" onClick={onStopTimer} style={styles.stopAction}>
