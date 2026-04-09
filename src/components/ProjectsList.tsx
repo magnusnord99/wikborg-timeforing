@@ -31,7 +31,7 @@ export function ProjectsList({
 
   return (
     <div>
-      <form onSubmit={handleAdd} style={styles.addForm}>
+      <form onSubmit={handleAdd} className="project-add-form">
         <input
           type="text"
           placeholder="Nytt prosjekt"
@@ -48,9 +48,9 @@ export function ProjectsList({
         {projects.map((project) => {
           const isActive = activeEntry?.project_id === project.id
           return (
-            <li key={project.id} style={styles.item}>
+            <li key={project.id} className="project-item">
               <span style={styles.projectName}>{project.name}</span>
-              <div style={styles.actions}>
+              <div className="project-actions">
                 {isActive ? (
                   <button
                     onClick={onStop}
@@ -100,11 +100,6 @@ export function ProjectsList({
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  addForm: {
-    display: 'flex',
-    gap: 8,
-    marginBottom: 16,
-  },
   input: {
     flex: 1,
     padding: 10,
@@ -129,20 +124,8 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     padding: 0,
   },
-  item: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '12px 0',
-    borderBottom: '1px solid #334155',
-    gap: 12,
-  },
   projectName: {
     flex: 1,
-  },
-  actions: {
-    display: 'flex',
-    gap: 8,
   },
   button: {
     padding: '6px 12px',

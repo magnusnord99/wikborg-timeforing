@@ -13,3 +13,141 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Layout */
+.app-layout {
+  min-height: 100vh;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.app-section {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+/* ProjectsList */
+.project-add-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.project-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #334155;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.project-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* TimeLog EditForm */
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Touch targets — minimum 44px høyde på alle knapper (Apple/Google HIG) */
+button {
+  min-height: 44px;
+}
+
+/* Mobile (< 600px) */
+@media (max-width: 600px) {
+  .app-layout {
+    padding: 12px;
+  }
+
+  .app-header {
+    margin-bottom: 20px;
+  }
+
+  .app-section {
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .app-main {
+    gap: 16px;
+  }
+
+  /* Knapper i prosjektlisten legger seg under prosjektnavnet */
+  .project-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .project-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* Edit-skjema: datetime-inputs tar full bredde */
+  .edit-form input,
+  .edit-form select {
+    width: 100%;
+  }
+
+  .edit-actions {
+    flex-direction: column;
+  }
+
+  .edit-actions button {
+    width: 100%;
+  }
+
+  /* Legg-til-prosjekt-form: input og knapp stablet */
+  .project-add-form {
+    flex-direction: column;
+  }
+}
+
+/* Tablet (600px – 768px) */
+@media (min-width: 600px) and (max-width: 768px) {
+  .app-layout {
+    padding: 16px;
+  }
+
+  .app-section {
+    padding: 20px;
+  }
+}

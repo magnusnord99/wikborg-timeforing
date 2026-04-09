@@ -153,7 +153,7 @@ function EditForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} style={styles.editForm}>
+    <form onSubmit={handleSubmit} className="edit-form">
       <input
         type="text"
         placeholder="Kommentar (hva ble gjort)"
@@ -185,7 +185,7 @@ function EditForm({
         style={styles.input}
         placeholder="Sluttid"
       />
-      <div style={styles.editActions}>
+      <div className="edit-actions">
         <button type="submit" style={styles.saveButton}>
           Lagre
         </button>
@@ -287,12 +287,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     cursor: 'pointer',
   },
-  editForm: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-    width: '100%',
-  },
   select: {
     padding: 8,
     borderRadius: 6,
@@ -308,10 +302,6 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#0f172a',
     color: '#e2e8f0',
     fontSize: 14,
-  },
-  editActions: {
-    display: 'flex',
-    gap: 8,
   },
   saveButton: {
     padding: '8px 16px',

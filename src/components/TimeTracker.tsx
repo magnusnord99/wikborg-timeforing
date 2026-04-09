@@ -141,10 +141,10 @@ export function TimeTracker() {
   }
 
   return (
-    <div style={styles.layout}>
-      <header style={styles.header}>
+    <div className="app-layout">
+      <header className="app-header">
         <h1 style={styles.title}>Wikborg Tidsføring</h1>
-        <div style={styles.headerRight}>
+        <div className="app-header-right">
           <span style={styles.date}>{formatDate(selectedDate)}</span>
           <button
             onClick={() => supabase.auth.signOut()}
@@ -155,8 +155,8 @@ export function TimeTracker() {
         </div>
       </header>
 
-      <main style={styles.main}>
-        <section style={styles.section}>
+      <main className="app-main">
+        <section className="app-section">
           <h2 style={styles.sectionTitle}>Prosjekter</h2>
           <ProjectsList
             projects={projects}
@@ -168,7 +168,7 @@ export function TimeTracker() {
           />
         </section>
 
-        <section style={styles.section}>
+        <section className="app-section">
           <h2 style={styles.sectionTitle}>Dagens timer</h2>
           <input
             type="date"
@@ -189,7 +189,7 @@ export function TimeTracker() {
           )}
         </section>
 
-        <section style={styles.section}>
+        <section className="app-section">
           <h2 style={styles.sectionTitle}>Oppsummering</h2>
           <DailySummary entries={entries} projects={projects} />
         </section>
@@ -212,29 +212,10 @@ function formatDate(s: string): string {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  layout: {
-    minHeight: '100vh',
-    maxWidth: 900,
-    margin: '0 auto',
-    padding: 24,
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 32,
-    flexWrap: 'wrap',
-    gap: 16,
-  },
   title: {
     margin: 0,
     fontSize: 24,
     fontWeight: 700,
-  },
-  headerRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 16,
   },
   date: {
     color: '#94a3b8',
@@ -248,16 +229,6 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     cursor: 'pointer',
     fontSize: 14,
-  },
-  main: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 32,
-  },
-  section: {
-    background: '#1e293b',
-    borderRadius: 12,
-    padding: 24,
   },
   sectionTitle: {
     margin: '0 0 16px',
