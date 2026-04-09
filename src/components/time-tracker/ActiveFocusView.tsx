@@ -1,4 +1,5 @@
-import { Activity, ChartColumn, Clock3, FolderKanban, ListTodo, Square } from 'lucide-react'
+import { Activity, ChartColumn, Clock3, Eye, EyeOff, FolderKanban, ListTodo, Square } from 'lucide-react'
+import { useState } from 'react'
 import type { Project, TimeEntry } from '../../types'
 import { formatHours, formatTime } from '../time-utils'
 import { styles } from './timeTrackerStyles'
@@ -32,6 +33,8 @@ export function ActiveFocusView({
   onOpenLog,
   onOpenSummary,
 }: Props) {
+  const [discreet, setDiscreet] = useState(false)
+
   return (
     <div className="tracker-focus-grid" style={styles.focusGrid}>
       <div style={styles.focusHero}>
@@ -40,10 +43,22 @@ export function ActiveFocusView({
             <Activity size={14} />
             Sesjon aktiv
           </span>
-          <span style={styles.focusClock}>
-            <Clock3 size={15} />
-            Startet {formatTime(activeEntry.start_time)}
-          </span>
+          <div style={discreetStyles.topRight}>
+            <span style={styles.focusClock}>
+              <Clock3 size={15} />
+              Startet {formatTime(activeEntry.start_time)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setDiscreet((d) => !d)}
+              style={discreetStyles.toggleBtn}
+              title={discreet ? 'Vis timer' : 'Skjul timer'}
+              aria-label={discreet ? 'Vis timer' : 'Skjul timer'}
+            >
+              {discreet ? <Eye size={15} /> : <EyeOff size={15} />}
+              <span>{discreet ? 'Vis' : 'Diskret'}</span>
+            </button>
+          </div>
         </div>
 
         <div style={styles.focusProjectRow}>
@@ -51,7 +66,9 @@ export function ActiveFocusView({
           <span>{activeProject.name}</span>
         </div>
 
-        <div style={styles.focusTimer}>{activeDurationLabel}</div>
+        <div style={{ ...styles.focusTimer, ...(discreet ? discreetStyles.timerHidden : {}) }}>
+          {discreet ? '••:••' : activeDurationLabel}
+        </div>
 
         <div style={styles.focusActions}>
           <button type="button" onClick={onStopTimer} style={styles.stopAction}>
@@ -96,4 +113,29 @@ export function ActiveFocusView({
       </div>
     </div>
   )
+}
+
+const discreetStyles: Record<string, React.CSSProperties> = {
+  topRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  },
+  toggleBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '6px 10px',
+    borderRadius: 8,
+    border: '1px solid rgba(148, 163, 184, 0.2)',
+    background: 'transparent',
+    color: 'rgba(148, 163, 184, 0.7)',
+    fontSize: 12,
+    cursor: 'pointer',
+  },
+  timerHidden: {
+    filter: 'blur(8px)',
+    userSelect: 'none',
+    color: 'rgba(191, 219, 254, 0.4)',
+  },
 }
