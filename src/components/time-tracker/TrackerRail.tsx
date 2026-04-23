@@ -18,7 +18,7 @@ export function TrackerRail({ activePanel, activeEntry, navItems, onSelect }: Pr
   return (
     <>
       <aside className="tracker-rail" style={styles.rail}>
-        <div style={styles.railTop}>
+        <div className="tracker-rail-top" style={styles.railTop}>
           <div style={styles.brandMark} title="Wikborg Tidsforing">
             <Clock3 size={18} />
           </div>
@@ -48,7 +48,7 @@ export function TrackerRail({ activePanel, activeEntry, navItems, onSelect }: Pr
           })}
         </nav>
 
-        <div style={styles.railFooter}>
+        <div className="tracker-rail-footer" style={styles.railFooter}>
           <button
             type="button"
             onClick={() => setShowFeedback(true)}

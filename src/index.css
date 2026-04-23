@@ -97,6 +97,17 @@ textarea:focus-visible {
   min-height: 100vh;
   border-left: none;
   border-radius: 0 22px 22px 0;
+  flex-direction: column;
+  padding: 18px 8px;
+}
+
+.tracker-nav {
+  flex-direction: column;
+}
+
+.tracker-rail-footer {
+  flex-direction: column;
+  gap: 8px;
 }
 
 .tracker-content-stack {
@@ -125,7 +136,7 @@ textarea:focus-visible {
 
 .tracker-layout {
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
@@ -205,6 +216,10 @@ textarea:focus-visible {
     min-height: auto;
     border-left: 1px solid var(--color-elevated-border);
     border-radius: 16px;
+    flex-direction: row;
+    padding: 12px 14px;
+    gap: 8px;
+    align-items: center;
   }
 
   .tracker-nav {
@@ -212,11 +227,18 @@ textarea:focus-visible {
     overflow-x: auto;
     padding-bottom: 2px;
     justify-content: flex-start;
+    width: auto;
   }
 
   .tracker-nav-button--active::before {
-    /* Fjern venstre-indikatoren når nav er horisontal */
     display: none;
+  }
+
+  .tracker-rail-footer {
+    flex-direction: row;
+    margin-top: 0;
+    margin-left: auto;
+    gap: 6px;
   }
 
   .tracker-content-stack {
@@ -252,7 +274,17 @@ textarea:focus-visible {
 
 @media (max-width: 640px) {
   .tracker-shell {
-    padding: 12px;
+    padding: 10px;
+  }
+
+  .tracker-rail {
+    padding: 8px 10px;
+    border-radius: 12px;
+    gap: 4px;
+  }
+
+  .tracker-rail-top {
+    display: none !important;
   }
 
   .tracker-header,
@@ -261,8 +293,14 @@ textarea:focus-visible {
     align-items: stretch;
   }
 
+  .tracker-subtitle {
+    display: none;
+  }
+
   .tracker-nav-button {
-    min-width: 52px;
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
   }
 
   .tracker-stat-grid {
@@ -275,5 +313,10 @@ textarea:focus-visible {
 
   .focus-timer {
     font-size: 40px;
+  }
+
+  /* Icon-only nav buttons in WeekView/MonthView */
+  .nav-btn-text {
+    display: none;
   }
 }

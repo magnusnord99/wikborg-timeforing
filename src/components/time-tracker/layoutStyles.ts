@@ -9,16 +9,13 @@ export const layoutStyles: Record<string, CSSProperties> = {
   },
   workspace: {
     display: 'grid',
-    gridTemplateColumns: '76px minmax(0, 1fr)',
     gap: 24,
     alignItems: 'start',
   },
   rail: {
     display: 'flex',
-    flexDirection: 'column',
     gap: 18,
     alignItems: 'center',
-    padding: '18px 8px',
     background: 'rgba(15, 23, 42, 0.86)',
     border: '1px solid var(--color-elevated-border)',
     boxShadow: 'var(--shadow-soft)',
@@ -42,7 +39,6 @@ export const layoutStyles: Record<string, CSSProperties> = {
   },
   nav: {
     display: 'flex',
-    flexDirection: 'column',
     gap: 8,
     width: '100%',
     alignItems: 'center',
@@ -83,7 +79,6 @@ export const layoutStyles: Record<string, CSSProperties> = {
   railFooter: {
     marginTop: 'auto',
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
   },
   logoutRail: {

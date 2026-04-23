@@ -98,6 +98,15 @@ export function TimeTracker() {
         onDateChange={tracker.setSelectedDate}
         onEditEntry={(id, updates) => void tracker.updateEntry(id, updates)}
         onDeleteEntry={(id) => void tracker.deleteEntry(id)}
+        viewMode={tracker.viewMode}
+        onViewModeChange={tracker.setViewMode}
+        selectedWeek={tracker.selectedWeek}
+        selectedMonth={tracker.selectedMonth}
+        rangeEntries={tracker.rangeEntries}
+        rangeLoading={tracker.rangeLoading}
+        onDayClick={tracker.handleDayClick}
+        onWeekNav={tracker.handleWeekNav}
+        onMonthNav={tracker.handleMonthNav}
       />
     )
   }

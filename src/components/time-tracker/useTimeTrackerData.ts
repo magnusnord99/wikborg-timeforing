@@ -1,19 +1,20 @@
 import { useEffect, useState } from 'react'
 import type { Project, TimeEntry } from '../../types'
-import { toDateString } from '../time-utils'
+import { getMonthEnd, getMonthStart, getWeekEnd, getWeekStart, shiftDate, toDateString, toMonthString } from '../time-utils'
 import {
   createProjectRecord,
   createTimerEntry,
   deleteProjectRecord,
   deleteTimeEntry,
   fetchEntriesForDate,
+  fetchEntriesForRange,
   fetchProjectsQuery,
   getSignedInUserId,
   stopTimerEntry,
   updateEntryDescription,
   updateTimeEntry,
 } from './trackerApi'
-import type { PanelId, TrackerNotice } from './types'
+import type { PanelId, TrackerNotice, ViewMode } from './types'
 
 export function useTimeTrackerData() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -25,6 +26,11 @@ export function useTimeTrackerData() {
   const [now, setNow] = useState(() => Date.now())
   const [activePanel, setActivePanel] = useState<PanelId>('projects')
   const [sessionNote, setSessionNote] = useState('')
+  const [viewMode, setViewMode] = useState<ViewMode>('day')
+  const [selectedWeek, setSelectedWeek] = useState(() => getWeekStart(toDateString(new Date())))
+  const [selectedMonth, setSelectedMonth] = useState(() => toMonthString(toDateString(new Date())))
+  const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([])
+  const [rangeLoading, setRangeLoading] = useState(false)
 
   useEffect(() => {
     void fetchProjects()
@@ -33,6 +39,11 @@ export function useTimeTrackerData() {
   useEffect(() => {
     void fetchEntries()
   }, [selectedDate])
+
+  useEffect(() => {
+    if (viewMode === 'day') return
+    void fetchRangeEntries()
+  }, [viewMode, selectedWeek, selectedMonth])
 
   useEffect(() => {
     if (!activeEntry) return
@@ -79,6 +90,41 @@ export function useTimeTrackerData() {
     setActiveEntry(active ?? null)
     setEntries(data ?? [])
     setLoading(false)
+  }
+
+  async function fetchRangeEntries() {
+    setRangeLoading(true)
+    const start = viewMode === 'week' ? selectedWeek : getMonthStart(selectedMonth)
+    const end = viewMode === 'week' ? getWeekEnd(selectedWeek) : getMonthEnd(selectedMonth)
+    const { data, error } = await fetchEntriesForRange(start, end)
+
+    if (error) {
+      console.error('Feil ved henting av timer for periode:', error)
+      setNotice({ type: 'error', text: 'Kunne ikke hente timer for perioden.' })
+      setRangeLoading(false)
+      return
+    }
+
+    setNotice(null)
+    setRangeEntries(data ?? [])
+    setRangeLoading(false)
+  }
+
+  function handleDayClick(date: string) {
+    setSelectedDate(date)
+    setViewMode('day')
+  }
+
+  function handleWeekNav(direction: -1 | 1) {
+    setSelectedWeek((prev) => shiftDate(prev, direction * 7))
+  }
+
+  function handleMonthNav(direction: -1 | 1) {
+    setSelectedMonth((prev) => {
+      const [year, month] = prev.split('-').map(Number)
+      const date = new Date(year, month - 1 + direction, 1)
+      return toMonthString(toDateString(date))
+    })
   }
 
   async function startTimer(projectId: string) {
@@ -211,6 +257,15 @@ export function useTimeTrackerData() {
     setActivePanel,
     sessionNote,
     setSessionNote,
+    viewMode,
+    setViewMode,
+    selectedWeek,
+    selectedMonth,
+    rangeEntries,
+    rangeLoading,
+    handleDayClick,
+    handleWeekNav,
+    handleMonthNav,
     startTimer,
     handleStopTimer,
     deleteEntry,

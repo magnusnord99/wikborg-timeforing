@@ -1,3 +1,5 @@
+import type { TimeEntry } from '../types'
+
 export function toDateString(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
@@ -75,4 +77,43 @@ export function formatLiveDuration(start: string, end: string): string {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds
     .toString()
     .padStart(2, '0')}`
+}
+
+export function getWeekStart(date: string): string {
+  const d = new Date(`${date}T12:00:00`)
+  const day = d.getDay()
+  const offset = day === 0 ? -6 : 1 - day
+  return shiftDate(date, offset)
+}
+
+export function getWeekEnd(date: string): string {
+  return shiftDate(getWeekStart(date), 6)
+}
+
+export function getMonthStart(month: string): string {
+  return `${month}-01`
+}
+
+export function getMonthEnd(month: string): string {
+  const [year, mon] = month.split('-').map(Number)
+  const date = new Date(year, mon, 0)
+  return toDateString(date)
+}
+
+export function toMonthString(date: string): string {
+  return date.slice(0, 7)
+}
+
+export function groupEntriesByDate(entries: TimeEntry[]): Map<string, TimeEntry[]> {
+  const map = new Map<string, TimeEntry[]>()
+  for (const entry of entries) {
+    const key = entry.start_time.slice(0, 10)
+    const existing = map.get(key)
+    if (existing) {
+      existing.push(entry)
+    } else {
+      map.set(key, [entry])
+    }
+  }
+  return map
 }

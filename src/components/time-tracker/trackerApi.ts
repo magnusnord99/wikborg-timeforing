@@ -56,3 +56,12 @@ export async function deleteProjectRecord(projectId: string) {
 export async function updateEntryDescription(entryId: string, description: string | null) {
   return supabase.from('time_entries').update({ description }).eq('id', entryId)
 }
+
+export async function fetchEntriesForRange(startDate: string, endDate: string) {
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .gte('start_time', `${startDate}T00:00:00`)
+    .lte('start_time', `${endDate}T23:59:59`)
+    .order('start_time', { ascending: true })
+}

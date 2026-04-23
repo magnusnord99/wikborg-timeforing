@@ -15,7 +15,7 @@ export function TrackerHeader({ activeEntry, isToday, selectedDate, activeDurati
       <div style={styles.titleWrap}>
         <span style={styles.eyebrow}>{activeEntry ? 'Fokusmodus' : 'Arbeidsdag'}</span>
         <h1 className="tracker-title" style={styles.title}>{activeEntry ? 'Timeren kjører' : 'Wikborg Tidsføring'}</h1>
-        <p style={styles.subtitle}>
+        <p className="tracker-subtitle" style={styles.subtitle}>
           {activeEntry
             ? 'Vis bare det du trenger mens du jobber. Resten ligger i menyen til venstre.'
             : isToday
