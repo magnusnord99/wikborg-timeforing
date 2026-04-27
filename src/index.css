@@ -319,4 +319,18 @@ textarea:focus-visible {
   .nav-btn-text {
     display: none;
   }
+
+  .focus-hero-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .focus-actions {
+    flex-direction: column;
+  }
+
+  .focus-actions > button {
+    width: 100%;
+    justify-content: center;
+  }
 }

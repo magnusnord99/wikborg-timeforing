@@ -8,7 +8,6 @@ export const focusStyles: Record<string, CSSProperties> = {
   },
   focusGrid: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 1.45fr) minmax(260px, 0.8fr)',
     gap: 18,
   },
   focusHero: {

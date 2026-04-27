@@ -38,7 +38,7 @@ export function ActiveFocusView({
   return (
     <div className="tracker-focus-grid" style={styles.focusGrid}>
       <div style={styles.focusHero}>
-        <div style={styles.focusHeroTop}>
+        <div className="focus-hero-top" style={styles.focusHeroTop}>
           <span style={styles.focusPill}>
             <Activity size={14} />
             Sesjon aktiv
@@ -70,7 +70,7 @@ export function ActiveFocusView({
           {discreet ? '••:••' : activeDurationLabel}
         </div>
 
-        <div style={styles.focusActions}>
+        <div className="focus-actions" style={styles.focusActions}>
           <button type="button" onClick={onStopTimer} style={styles.stopAction}>
             <Square size={16} />
             <span>Stopp timer</span>
