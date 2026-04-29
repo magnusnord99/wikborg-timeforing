@@ -6,6 +6,7 @@ import {
   createTimerEntry,
   deleteProjectRecord,
   deleteTimeEntry,
+  fetchActiveEntry,
   fetchEntriesForDate,
   fetchEntriesForRange,
   fetchProjectsQuery,
@@ -76,18 +77,20 @@ export function useTimeTrackerData() {
 
   async function fetchEntries() {
     setLoading(true)
-    const { data, error } = await fetchEntriesForDate(selectedDate)
+    const [{ data, error }, { data: activeData, error: activeError }] = await Promise.all([
+      fetchEntriesForDate(selectedDate),
+      fetchActiveEntry(),
+    ])
 
-    if (error) {
-      console.error('Feil ved henting av timer:', error)
+    if (error || activeError) {
+      console.error('Feil ved henting av timer:', error ?? activeError)
       setNotice({ type: 'error', text: 'Kunne ikke hente timer for valgt dato.' })
       setLoading(false)
       return
     }
 
-    const active = (data ?? []).find((entry) => !entry.end_time)
     setNotice(null)
-    setActiveEntry(active ?? null)
+    setActiveEntry(activeData ?? null)
     setEntries(data ?? [])
     setLoading(false)
   }
