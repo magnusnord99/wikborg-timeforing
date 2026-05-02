@@ -8,6 +8,7 @@ import {
   deleteTimeEntry,
   fetchEntriesForDate,
   fetchEntriesForRange,
+  fetchActiveEntry,
   fetchProjectsQuery,
   getSignedInUserId,
   stopTimerEntry,
@@ -76,7 +77,7 @@ export function useTimeTrackerData() {
 
   async function fetchEntries() {
     setLoading(true)
-    const { data, error } = await fetchEntriesForDate(selectedDate)
+    const [{ data, error }, activeResult] = await Promise.all([fetchEntriesForDate(selectedDate), fetchActiveEntry()])
 
     if (error) {
       console.error('Feil ved henting av timer:', error)
@@ -85,9 +86,16 @@ export function useTimeTrackerData() {
       return
     }
 
-    const active = (data ?? []).find((entry) => !entry.end_time)
+    if (activeResult.error) {
+      console.error('Feil ved henting av aktiv timer:', activeResult.error)
+      setNotice({ type: 'error', text: 'Kunne ikke hente aktiv timer akkurat nå.' })
+      setLoading(false)
+      return
+    }
+
+    const active = activeResult.data?.[0] ?? null
     setNotice(null)
-    setActiveEntry(active ?? null)
+    setActiveEntry(active)
     setEntries(data ?? [])
     setLoading(false)
   }
@@ -166,7 +174,9 @@ export function useTimeTrackerData() {
   }
 
   async function handleStopTimer() {
-    await saveSessionNote()
+    const noteSaved = await saveSessionNote()
+    if (!noteSaved) return
+
     await stopTimer()
   }
 
@@ -227,20 +237,21 @@ export function useTimeTrackerData() {
   }
 
   async function saveSessionNote() {
-    if (!activeEntry) return
+    if (!activeEntry) return true
 
     const nextNote = sessionNote.trim()
-    if ((activeEntry.description ?? '') === nextNote) return
+    if ((activeEntry.description ?? '') === nextNote) return true
 
     const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
 
     if (error) {
       console.error('Feil ved lagring av notat:', error)
       setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
-      return
+      return false
     }
 
     setActiveEntry((previous) => (previous ? { ...previous, description: nextNote || null } : previous))
+    return true
   }
 
   return {

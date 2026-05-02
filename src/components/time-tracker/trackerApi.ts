@@ -17,6 +17,15 @@ export async function fetchEntriesForDate(selectedDate: string) {
     .order('start_time', { ascending: false })
 }
 
+export async function fetchActiveEntry() {
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .is('end_time', null)
+    .order('start_time', { ascending: false })
+    .limit(1)
+}
+
 export async function getSignedInUserId() {
   const {
     data: { user },
