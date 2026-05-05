@@ -6,6 +6,7 @@ import {
   createTimerEntry,
   deleteProjectRecord,
   deleteTimeEntry,
+  fetchActiveEntry,
   fetchEntriesForDate,
   fetchEntriesForRange,
   fetchProjectsQuery,
@@ -85,7 +86,15 @@ export function useTimeTrackerData() {
       return
     }
 
-    const active = (data ?? []).find((entry) => !entry.end_time)
+    const { data: active, error: activeError } = await fetchActiveEntry()
+
+    if (activeError) {
+      console.error('Feil ved henting av aktiv timer:', activeError)
+      setNotice({ type: 'error', text: 'Kunne ikke hente aktiv timer.' })
+      setLoading(false)
+      return
+    }
+
     setNotice(null)
     setActiveEntry(active ?? null)
     setEntries(data ?? [])
@@ -166,7 +175,9 @@ export function useTimeTrackerData() {
   }
 
   async function handleStopTimer() {
-    await saveSessionNote()
+    const saved = await saveSessionNote()
+    if (!saved) return
+
     await stopTimer()
   }
 
@@ -226,21 +237,22 @@ export function useTimeTrackerData() {
     await fetchEntries()
   }
 
-  async function saveSessionNote() {
-    if (!activeEntry) return
+  async function saveSessionNote(): Promise<boolean> {
+    if (!activeEntry) return true
 
     const nextNote = sessionNote.trim()
-    if ((activeEntry.description ?? '') === nextNote) return
+    if ((activeEntry.description ?? '') === nextNote) return true
 
     const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
 
     if (error) {
       console.error('Feil ved lagring av notat:', error)
       setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
-      return
+      return false
     }
 
     setActiveEntry((previous) => (previous ? { ...previous, description: nextNote || null } : previous))
+    return true
   }
 
   return {
