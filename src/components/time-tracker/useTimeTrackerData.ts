@@ -6,6 +6,7 @@ import {
   createTimerEntry,
   deleteProjectRecord,
   deleteTimeEntry,
+  fetchActiveTimerEntry,
   fetchEntriesForDate,
   fetchEntriesForRange,
   fetchProjectsQuery,
@@ -76,19 +77,31 @@ export function useTimeTrackerData() {
 
   async function fetchEntries() {
     setLoading(true)
-    const { data, error } = await fetchEntriesForDate(selectedDate)
+    const [
+      { data, error },
+      { data: active, error: activeError },
+    ] = await Promise.all([fetchEntriesForDate(selectedDate), fetchActiveTimerEntry()])
 
-    if (error) {
-      console.error('Feil ved henting av timer:', error)
+    if (error || activeError) {
+      console.error('Feil ved henting av timer:', error ?? activeError)
       setNotice({ type: 'error', text: 'Kunne ikke hente timer for valgt dato.' })
       setLoading(false)
       return
     }
 
-    const active = (data ?? []).find((entry) => !entry.end_time)
+    const dateEntries = data ?? []
+    const activeFromDate = dateEntries.find((entry) => !entry.end_time)
+    const currentActive = active ?? activeFromDate ?? null
+    const shouldShowActiveInSelectedDate =
+      currentActive && toDateString(new Date(currentActive.start_time)) === selectedDate
+    const visibleEntries =
+      shouldShowActiveInSelectedDate && !dateEntries.some((entry) => entry.id === currentActive.id)
+        ? [currentActive, ...dateEntries]
+        : dateEntries
+
     setNotice(null)
-    setActiveEntry(active ?? null)
-    setEntries(data ?? [])
+    setActiveEntry(currentActive)
+    setEntries(visibleEntries)
     setLoading(false)
   }
 
@@ -133,6 +146,25 @@ export function useTimeTrackerData() {
     const userId = await getSignedInUserId()
     if (!userId) return
 
+    const { data: existingActive, error: activeLookupError } = await fetchActiveTimerEntry()
+
+    if (activeLookupError) {
+      console.error('Feil ved sjekk av aktiv timer:', activeLookupError)
+      setNotice({ type: 'error', text: 'Kunne ikke kontrollere aktiv timer. Prøv igjen.' })
+      return
+    }
+
+    if (existingActive) {
+      setNotice({ type: 'info', text: 'Timeren kjører allerede.' })
+      setActiveEntry(existingActive)
+      if (toDateString(new Date(existingActive.start_time)) === selectedDate) {
+        setEntries((previous) =>
+          previous.some((entry) => entry.id === existingActive.id) ? previous : [existingActive, ...previous],
+        )
+      }
+      return
+    }
+
     const startAt = new Date().toISOString()
     const { data, error } = await createTimerEntry(userId, projectId, startAt)
 
@@ -145,7 +177,9 @@ export function useTimeTrackerData() {
     setNotice({ type: 'info', text: 'Timer startet. Fokusmodus er aktiv.' })
     setNow(Date.now())
     setActiveEntry(data)
-    setEntries((previous) => [data, ...previous])
+    if (toDateString(new Date(startAt)) === selectedDate) {
+      setEntries((previous) => [data, ...previous])
+    }
   }
 
   async function stopTimer() {
@@ -166,7 +200,9 @@ export function useTimeTrackerData() {
   }
 
   async function handleStopTimer() {
-    await saveSessionNote()
+    const didSave = await saveSessionNote()
+    if (!didSave) return
+
     await stopTimer()
   }
 
@@ -227,20 +263,24 @@ export function useTimeTrackerData() {
   }
 
   async function saveSessionNote() {
-    if (!activeEntry) return
+    if (!activeEntry) return true
 
     const nextNote = sessionNote.trim()
-    if ((activeEntry.description ?? '') === nextNote) return
+    if ((activeEntry.description ?? '') === nextNote) return true
 
     const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
 
     if (error) {
       console.error('Feil ved lagring av notat:', error)
       setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
-      return
+      return false
     }
 
     setActiveEntry((previous) => (previous ? { ...previous, description: nextNote || null } : previous))
+    setEntries((previous) =>
+      previous.map((entry) => (entry.id === activeEntry.id ? { ...entry, description: nextNote || null } : entry)),
+    )
+    return true
   }
 
   return {
