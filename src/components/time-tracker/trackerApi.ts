@@ -1,20 +1,46 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
+import { getLocalDayRangeIso, shiftDate } from '../time-utils'
+
+const PAGE_SIZE = 1000
+
+async function fetchTimeEntriesBetween(
+  startIso: string,
+  endIso: string,
+  ascending: boolean,
+): Promise<{ data: TimeEntry[] | null; error: unknown | null }> {
+  const entries: TimeEntry[] = []
+  let from = 0
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .select('*')
+      .gte('start_time', startIso)
+      .lt('start_time', endIso)
+      .order('start_time', { ascending })
+      .range(from, from + PAGE_SIZE - 1)
+
+    if (error) return { data: null, error }
+
+    entries.push(...((data ?? []) as TimeEntry[]))
+
+    if (!data || data.length < PAGE_SIZE) {
+      return { data: entries, error: null }
+    }
+
+    from += PAGE_SIZE
+  }
+}
 
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
 
 export async function fetchEntriesForDate(selectedDate: string) {
-  const start = `${selectedDate}T00:00:00`
-  const end = `${selectedDate}T23:59:59`
+  const { startIso, endIso } = getLocalDayRangeIso(selectedDate)
 
-  return supabase
-    .from('time_entries')
-    .select('*')
-    .gte('start_time', start)
-    .lte('start_time', end)
-    .order('start_time', { ascending: false })
+  return fetchTimeEntriesBetween(startIso, endIso, false)
 }
 
 export async function getSignedInUserId() {
@@ -31,6 +57,16 @@ export async function createTimerEntry(userId: string, projectId: string, startT
     .insert({ user_id: userId, project_id: projectId, start_time: startTime })
     .select()
     .single()
+}
+
+export async function fetchActiveTimerEntry() {
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .is('end_time', null)
+    .order('start_time', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 }
 
 export async function stopTimerEntry(entryId: string, endTime: string) {
@@ -58,10 +94,8 @@ export async function updateEntryDescription(entryId: string, description: strin
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
-  return supabase
-    .from('time_entries')
-    .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
-    .order('start_time', { ascending: true })
+  const { startIso } = getLocalDayRangeIso(startDate)
+  const { startIso: endIso } = getLocalDayRangeIso(shiftDate(endDate, 1))
+
+  return fetchTimeEntriesBetween(startIso, endIso, true)
 }
