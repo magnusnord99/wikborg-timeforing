@@ -1,7 +1,19 @@
 import type { TimeEntry } from '../types'
 
 export function toDateString(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  const pad = (value: number) => value.toString().padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+export function getLocalDayRange(dateString: string): { start: Date; end: Date } {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const start = new Date(year, month - 1, day, 0, 0, 0, 0)
+  const end = new Date(year, month - 1, day + 1, 0, 0, 0, 0)
+  return { start, end }
+}
+
+export function getLocalDateKey(iso: string): string {
+  return toDateString(new Date(iso))
 }
 
 export function shiftDate(dateString: string, days: number): string {
@@ -107,7 +119,7 @@ export function toMonthString(date: string): string {
 export function groupEntriesByDate(entries: TimeEntry[]): Map<string, TimeEntry[]> {
   const map = new Map<string, TimeEntry[]>()
   for (const entry of entries) {
-    const key = entry.start_time.slice(0, 10)
+    const key = getLocalDateKey(entry.start_time)
     const existing = map.get(key)
     if (existing) {
       existing.push(entry)
