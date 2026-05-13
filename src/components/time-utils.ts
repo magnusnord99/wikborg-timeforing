@@ -1,13 +1,42 @@
 import type { TimeEntry } from '../types'
 
 export function toDateString(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export function shiftDate(dateString: string, days: number): string {
-  const date = new Date(`${dateString}T12:00:00`)
+  const date = localDateFromDateString(dateString)
   date.setDate(date.getDate() + days)
   return toDateString(date)
+}
+
+function localDateFromDateString(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day, 12)
+}
+
+export function getLocalDayRange(dateString: string): { startIso: string; endIso: string } {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const start = new Date(year, month - 1, day)
+  const end = new Date(year, month - 1, day + 1)
+
+  return {
+    startIso: start.toISOString(),
+    endIso: end.toISOString(),
+  }
+}
+
+export function getLocalDateRange(startDate: string, endDate: string): { startIso: string; endIso: string } {
+  const start = getLocalDayRange(startDate)
+  const end = getLocalDayRange(endDate)
+
+  return {
+    startIso: start.startIso,
+    endIso: end.endIso,
+  }
 }
 
 export function getMinutesBetween(start: string, end: string): number {
@@ -23,7 +52,7 @@ export function getSecondsBetween(start: string, end: string): number {
 }
 
 export function formatDate(value: string): string {
-  const date = new Date(`${value}T12:00:00`)
+  const date = localDateFromDateString(value)
   return date.toLocaleDateString('nb-NO', {
     weekday: 'long',
     day: 'numeric',
@@ -80,7 +109,7 @@ export function formatLiveDuration(start: string, end: string): string {
 }
 
 export function getWeekStart(date: string): string {
-  const d = new Date(`${date}T12:00:00`)
+  const d = localDateFromDateString(date)
   const day = d.getDay()
   const offset = day === 0 ? -6 : 1 - day
   return shiftDate(date, offset)
@@ -107,7 +136,7 @@ export function toMonthString(date: string): string {
 export function groupEntriesByDate(entries: TimeEntry[]): Map<string, TimeEntry[]> {
   const map = new Map<string, TimeEntry[]>()
   for (const entry of entries) {
-    const key = entry.start_time.slice(0, 10)
+    const key = toDateString(new Date(entry.start_time))
     const existing = map.get(key)
     if (existing) {
       existing.push(entry)

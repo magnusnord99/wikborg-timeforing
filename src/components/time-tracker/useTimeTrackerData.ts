@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Project, TimeEntry } from '../../types'
 import { getMonthEnd, getMonthStart, getWeekEnd, getWeekStart, shiftDate, toDateString, toMonthString } from '../time-utils'
 import {
@@ -6,6 +6,7 @@ import {
   createTimerEntry,
   deleteProjectRecord,
   deleteTimeEntry,
+  fetchActiveTimerEntry,
   fetchEntriesForDate,
   fetchEntriesForRange,
   fetchProjectsQuery,
@@ -31,6 +32,8 @@ export function useTimeTrackerData() {
   const [selectedMonth, setSelectedMonth] = useState(() => toMonthString(toDateString(new Date())))
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([])
   const [rangeLoading, setRangeLoading] = useState(false)
+  const entriesRequestId = useRef(0)
+  const rangeRequestId = useRef(0)
 
   useEffect(() => {
     void fetchProjects()
@@ -75,28 +78,45 @@ export function useTimeTrackerData() {
   }
 
   async function fetchEntries() {
+    const requestId = entriesRequestId.current + 1
+    entriesRequestId.current = requestId
     setLoading(true)
-    const { data, error } = await fetchEntriesForDate(selectedDate)
+    const [entriesResult, activeResult] = await Promise.all([
+      fetchEntriesForDate(selectedDate),
+      fetchActiveTimerEntry(),
+    ])
 
-    if (error) {
-      console.error('Feil ved henting av timer:', error)
+    if (requestId !== entriesRequestId.current) return
+
+    if (entriesResult.error) {
+      console.error('Feil ved henting av timer:', entriesResult.error)
       setNotice({ type: 'error', text: 'Kunne ikke hente timer for valgt dato.' })
       setLoading(false)
       return
     }
 
-    const active = (data ?? []).find((entry) => !entry.end_time)
-    setNotice(null)
-    setActiveEntry(active ?? null)
-    setEntries(data ?? [])
+    if (activeResult.error) {
+      console.error('Feil ved henting av aktiv timer:', activeResult.error)
+      setNotice({ type: 'error', text: 'Kunne ikke hente aktiv timer akkurat nå.' })
+    } else {
+      setNotice(null)
+      setActiveEntry(activeResult.data ?? null)
+    }
+
+    const data = entriesResult.data ?? []
+    setEntries(data)
     setLoading(false)
   }
 
   async function fetchRangeEntries() {
+    const requestId = rangeRequestId.current + 1
+    rangeRequestId.current = requestId
     setRangeLoading(true)
     const start = viewMode === 'week' ? selectedWeek : getMonthStart(selectedMonth)
     const end = viewMode === 'week' ? getWeekEnd(selectedWeek) : getMonthEnd(selectedMonth)
     const { data, error } = await fetchEntriesForRange(start, end)
+
+    if (requestId !== rangeRequestId.current) return
 
     if (error) {
       console.error('Feil ved henting av timer for periode:', error)
@@ -133,6 +153,20 @@ export function useTimeTrackerData() {
     const userId = await getSignedInUserId()
     if (!userId) return
 
+    const { data: openEntry, error: activeError } = await fetchActiveTimerEntry()
+
+    if (activeError) {
+      console.error('Feil ved kontroll av aktiv timer:', activeError)
+      setNotice({ type: 'error', text: 'Kunne ikke kontrollere aktiv timer akkurat nå.' })
+      return
+    }
+
+    if (openEntry) {
+      setActiveEntry(openEntry)
+      setNotice({ type: 'info', text: 'Du har allerede en aktiv timer.' })
+      return
+    }
+
     const startAt = new Date().toISOString()
     const { data, error } = await createTimerEntry(userId, projectId, startAt)
 
@@ -166,7 +200,9 @@ export function useTimeTrackerData() {
   }
 
   async function handleStopTimer() {
-    await saveSessionNote()
+    const noteSaved = await saveSessionNote()
+    if (!noteSaved) return
+
     await stopTimer()
   }
 
@@ -226,21 +262,22 @@ export function useTimeTrackerData() {
     await fetchEntries()
   }
 
-  async function saveSessionNote() {
-    if (!activeEntry) return
+  async function saveSessionNote(): Promise<boolean> {
+    if (!activeEntry) return true
 
     const nextNote = sessionNote.trim()
-    if ((activeEntry.description ?? '') === nextNote) return
+    if ((activeEntry.description ?? '') === nextNote) return true
 
     const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
 
     if (error) {
       console.error('Feil ved lagring av notat:', error)
       setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
-      return
+      return false
     }
 
     setActiveEntry((previous) => (previous ? { ...previous, description: nextNote || null } : previous))
+    return true
   }
 
   return {
