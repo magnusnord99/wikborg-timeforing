@@ -1,20 +1,66 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
+import { getLocalDateRange, getLocalDayRange } from '../time-utils'
+import type { PostgrestError } from '@supabase/supabase-js'
+
+const PAGE_SIZE = 1000
+
+type TimeEntriesResponse = {
+  data: TimeEntry[] | null
+  error: PostgrestError | null
+}
+
+type TimeEntryPageQuery = PromiseLike<TimeEntriesResponse>
+
+async function fetchAllTimeEntries(buildQuery: (from: number, to: number) => TimeEntryPageQuery): Promise<TimeEntriesResponse> {
+  const entries: TimeEntry[] = []
+  let from = 0
+
+  while (true) {
+    const to = from + PAGE_SIZE - 1
+    const { data, error } = await buildQuery(from, to)
+
+    if (error) {
+      return { data: null, error }
+    }
+
+    const page = data ?? []
+    entries.push(...page)
+
+    if (page.length < PAGE_SIZE) {
+      return { data: entries, error: null }
+    }
+
+    from += PAGE_SIZE
+  }
+}
 
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
 
 export async function fetchEntriesForDate(selectedDate: string) {
-  const start = `${selectedDate}T00:00:00`
-  const end = `${selectedDate}T23:59:59`
+  const { startIso, endIso } = getLocalDayRange(selectedDate)
 
+  return fetchAllTimeEntries((from, to) =>
+    supabase
+      .from('time_entries')
+      .select('*')
+      .gte('start_time', startIso)
+      .lt('start_time', endIso)
+      .order('start_time', { ascending: false })
+      .range(from, to),
+  )
+}
+
+export async function fetchActiveTimerEntry() {
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', start)
-    .lte('start_time', end)
+    .is('end_time', null)
     .order('start_time', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 }
 
 export async function getSignedInUserId() {
@@ -58,10 +104,15 @@ export async function updateEntryDescription(entryId: string, description: strin
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
-  return supabase
-    .from('time_entries')
-    .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
-    .order('start_time', { ascending: true })
+  const { startIso, endIso } = getLocalDateRange(startDate, endDate)
+
+  return fetchAllTimeEntries((from, to) =>
+    supabase
+      .from('time_entries')
+      .select('*')
+      .gte('start_time', startIso)
+      .lt('start_time', endIso)
+      .order('start_time', { ascending: true })
+      .range(from, to),
+  )
 }
