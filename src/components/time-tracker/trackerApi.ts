@@ -1,20 +1,50 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
+import { getLocalDateRange } from '../time-utils'
+
+const PAGE_SIZE = 1000
 
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
 
 export async function fetchEntriesForDate(selectedDate: string) {
-  const start = `${selectedDate}T00:00:00`
-  const end = `${selectedDate}T23:59:59`
+  const { start, end } = getLocalDateRange(selectedDate)
 
+  return fetchTimeEntryPages(start, end, false)
+}
+
+async function fetchTimeEntryPages(start: string, end: string, ascending: boolean) {
+  let from = 0
+  const allEntries: TimeEntry[] = []
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .select('*')
+      .gte('start_time', start)
+      .lt('start_time', end)
+      .order('start_time', { ascending })
+      .range(from, from + PAGE_SIZE - 1)
+
+    if (error) return { data: null, error }
+
+    const entries = (data ?? []) as TimeEntry[]
+    allEntries.push(...entries)
+
+    if (entries.length < PAGE_SIZE) return { data: allEntries, error: null }
+    from += PAGE_SIZE
+  }
+}
+
+export async function fetchActiveTimerEntry() {
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', start)
-    .lte('start_time', end)
+    .is('end_time', null)
     .order('start_time', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 }
 
 export async function getSignedInUserId() {
@@ -58,10 +88,8 @@ export async function updateEntryDescription(entryId: string, description: strin
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
-  return supabase
-    .from('time_entries')
-    .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
-    .order('start_time', { ascending: true })
+  const { start } = getLocalDateRange(startDate)
+  const { end } = getLocalDateRange(endDate)
+
+  return fetchTimeEntryPages(start, end, true)
 }
