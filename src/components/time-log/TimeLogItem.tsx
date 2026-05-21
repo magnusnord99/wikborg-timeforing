@@ -11,7 +11,9 @@ interface Props {
   confirmDelete: boolean
   now: number
   onEdit: () => void
-  onSaveComment: (description: string | null) => void
+  sessionNote: string
+  onSessionNoteChange: (value: string) => void
+  onSaveSessionNote: () => void
   onRequestDelete: () => void
   onCancelDelete: () => void
   onDelete: () => void
@@ -24,7 +26,9 @@ export function TimeLogItem({
   confirmDelete,
   now,
   onEdit,
-  onSaveComment,
+  sessionNote,
+  onSessionNoteChange,
+  onSaveSessionNote,
   onRequestDelete,
   onCancelDelete,
   onDelete,
@@ -67,8 +71,9 @@ export function TimeLogItem({
           <>
             <span style={styles.inlineHint}>Kommentar lagres automatisk når du klikker ut av feltet.</span>
             <CommentInput
-              value={entry.description ?? ''}
-              onSave={(description) => onSaveComment(description || null)}
+              value={sessionNote}
+              onChange={onSessionNoteChange}
+              onSave={onSaveSessionNote}
               placeholder="Hva jobber du med akkurat nå?"
             />
           </>
