@@ -91,11 +91,14 @@ export function TimeTracker() {
         entries={tracker.entries}
         projects={tracker.projects}
         activeEntry={tracker.activeEntry}
+        sessionNote={tracker.sessionNote}
         selectedDate={tracker.selectedDate}
         isToday={isToday}
         loading={tracker.loading}
         now={tracker.now}
         onDateChange={tracker.setSelectedDate}
+        onSessionNoteChange={tracker.setSessionNote}
+        onSaveSessionNote={() => void tracker.saveSessionNote()}
         onEditEntry={(id, updates) => void tracker.updateEntry(id, updates)}
         onDeleteEntry={(id) => void tracker.deleteEntry(id)}
         viewMode={tracker.viewMode}

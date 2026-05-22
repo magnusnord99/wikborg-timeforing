@@ -1,32 +1,20 @@
-import { useEffect, useState } from 'react'
 import { styles } from './timeLogStyles'
 
 interface Props {
   value: string
-  onSave: (value: string) => void
+  onChange: (value: string) => void
+  onSave: () => void
   placeholder: string
 }
 
-export function CommentInput({ value, onSave, placeholder }: Props) {
-  const [local, setLocal] = useState(value)
-
-  useEffect(() => {
-    setLocal(value)
-  }, [value])
-
-  function handleBlur() {
-    if (local.trim() !== value.trim()) {
-      onSave(local.trim())
-    }
-  }
-
+export function CommentInput({ value, onChange, onSave, placeholder }: Props) {
   return (
     <div style={styles.commentInputWrap}>
       <input
         type="text"
-        value={local}
-        onChange={(event) => setLocal(event.target.value)}
-        onBlur={handleBlur}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onSave}
         placeholder={placeholder}
         style={styles.commentInput}
       />

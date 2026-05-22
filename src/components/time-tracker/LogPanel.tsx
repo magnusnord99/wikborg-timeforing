@@ -11,11 +11,14 @@ interface Props {
   entries: TimeEntry[]
   projects: Project[]
   activeEntry: TimeEntry | null
+  sessionNote: string
   selectedDate: string
   isToday: boolean
   loading: boolean
   now: number
   onDateChange: (value: string) => void
+  onSessionNoteChange: (value: string) => void
+  onSaveSessionNote: () => void
   onEditEntry: (id: string, updates: Partial<TimeEntry>) => void
   onDeleteEntry: (id: string) => void
   viewMode: ViewMode
@@ -35,11 +38,14 @@ export function LogPanel({
   entries,
   projects,
   activeEntry,
+  sessionNote,
   selectedDate,
   isToday,
   loading,
   now,
   onDateChange,
+  onSessionNoteChange,
+  onSaveSessionNote,
   onEditEntry,
   onDeleteEntry,
   viewMode,
@@ -119,6 +125,9 @@ export function LogPanel({
               entries={entries}
               projects={projects}
               activeEntry={activeEntry}
+              sessionNote={sessionNote}
+              onSessionNoteChange={onSessionNoteChange}
+              onSaveSessionNote={onSaveSessionNote}
               onEdit={onEditEntry}
               onDelete={onDeleteEntry}
               now={now}
