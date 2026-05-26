@@ -3,11 +3,13 @@ import { styles } from './timeLogStyles'
 
 interface Props {
   value: string
+  onChange?: (value: string) => void
   onSave: (value: string) => void
   placeholder: string
+  saveOnBlur?: boolean
 }
 
-export function CommentInput({ value, onSave, placeholder }: Props) {
+export function CommentInput({ value, onChange, onSave, placeholder, saveOnBlur = false }: Props) {
   const [local, setLocal] = useState(value)
 
   useEffect(() => {
@@ -15,7 +17,7 @@ export function CommentInput({ value, onSave, placeholder }: Props) {
   }, [value])
 
   function handleBlur() {
-    if (local.trim() !== value.trim()) {
+    if (saveOnBlur || local.trim() !== value.trim()) {
       onSave(local.trim())
     }
   }
@@ -25,7 +27,10 @@ export function CommentInput({ value, onSave, placeholder }: Props) {
       <input
         type="text"
         value={local}
-        onChange={(event) => setLocal(event.target.value)}
+        onChange={(event) => {
+          setLocal(event.target.value)
+          onChange?.(event.target.value)
+        }}
         onBlur={handleBlur}
         placeholder={placeholder}
         style={styles.commentInput}

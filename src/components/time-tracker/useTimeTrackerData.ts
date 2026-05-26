@@ -285,10 +285,10 @@ export function useTimeTrackerData() {
     await refreshAfterMutation()
   }
 
-  async function saveSessionNote() {
+  async function saveSessionNote(noteOverride?: string) {
     if (!activeEntry) return true
 
-    const nextNote = sessionNote.trim()
+    const nextNote = (noteOverride ?? sessionNote).trim()
     if ((activeEntry.description ?? '') === nextNote) return true
 
     const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
