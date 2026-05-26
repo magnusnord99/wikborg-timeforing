@@ -11,10 +11,13 @@ interface Props {
   entries: TimeEntry[]
   projects: Project[]
   activeEntry: TimeEntry | null
+  activeComment: string
   selectedDate: string
   isToday: boolean
   loading: boolean
   now: number
+  onActiveCommentChange: (description: string) => void
+  onSaveActiveComment: (description: string) => void
   onDateChange: (value: string) => void
   onEditEntry: (id: string, updates: Partial<TimeEntry>) => void
   onDeleteEntry: (id: string) => void
@@ -35,10 +38,13 @@ export function LogPanel({
   entries,
   projects,
   activeEntry,
+  activeComment,
   selectedDate,
   isToday,
   loading,
   now,
+  onActiveCommentChange,
+  onSaveActiveComment,
   onDateChange,
   onEditEntry,
   onDeleteEntry,
@@ -119,6 +125,9 @@ export function LogPanel({
               entries={entries}
               projects={projects}
               activeEntry={activeEntry}
+              activeComment={activeComment}
+              onActiveCommentChange={onActiveCommentChange}
+              onSaveActiveComment={onSaveActiveComment}
               onEdit={onEditEntry}
               onDelete={onDeleteEntry}
               now={now}
