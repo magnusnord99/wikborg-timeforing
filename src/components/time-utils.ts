@@ -1,7 +1,8 @@
 import type { TimeEntry } from '../types'
 
 export function toDateString(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  const pad = (value: number) => value.toString().padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 export function shiftDate(dateString: string, days: number): string {
@@ -104,10 +105,24 @@ export function toMonthString(date: string): string {
   return date.slice(0, 7)
 }
 
+export function getLocalDateRangeBounds(startDate: string, endDate: string): { start: string; endExclusive: string } {
+  const start = new Date(`${startDate}T00:00:00`)
+  const endExclusive = new Date(`${shiftDate(endDate, 1)}T00:00:00`)
+
+  return {
+    start: start.toISOString(),
+    endExclusive: endExclusive.toISOString(),
+  }
+}
+
+export function getEntryDate(entry: Pick<TimeEntry, 'start_time'>): string {
+  return toDateString(new Date(entry.start_time))
+}
+
 export function groupEntriesByDate(entries: TimeEntry[]): Map<string, TimeEntry[]> {
   const map = new Map<string, TimeEntry[]>()
   for (const entry of entries) {
-    const key = entry.start_time.slice(0, 10)
+    const key = getEntryDate(entry)
     const existing = map.get(key)
     if (existing) {
       existing.push(entry)
