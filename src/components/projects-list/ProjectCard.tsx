@@ -59,7 +59,7 @@ export function ProjectCard({
           </button>
         )}
 
-        {confirmDelete ? (
+        {confirmDelete && !isActive ? (
           <>
             <button type="button" onClick={onRemove} style={{ ...styles.button, ...styles.dangerButton }}>
               <Check size={15} />
@@ -74,10 +74,11 @@ export function ProjectCard({
           <button
             type="button"
             onClick={onRequestDelete}
+            disabled={isActive}
             style={{ ...styles.ghostButton, ...styles.removeButton }}
           >
             <Trash2 size={15} />
-            <span>Fjern</span>
+            <span>{isActive ? 'Stopp først' : 'Fjern'}</span>
           </button>
         )}
       </div>

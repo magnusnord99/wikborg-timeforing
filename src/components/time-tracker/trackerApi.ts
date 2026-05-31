@@ -1,20 +1,45 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
+import { getLocalDayBounds } from '../time-utils'
+
+const PAGE_SIZE = 1000
+
+async function fetchEntriesBetween(startDate: string, endDate: string, ascending: boolean) {
+  const { startIso } = getLocalDayBounds(startDate)
+  const { endIso } = getLocalDayBounds(endDate)
+  const entries: TimeEntry[] = []
+  let from = 0
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .select('*')
+      .gte('start_time', startIso)
+      .lt('start_time', endIso)
+      .order('start_time', { ascending })
+      .range(from, from + PAGE_SIZE - 1)
+
+    if (error) {
+      return { data: null, error }
+    }
+
+    const page = (data ?? []) as TimeEntry[]
+    entries.push(...page)
+
+    if (page.length < PAGE_SIZE) {
+      return { data: entries, error: null }
+    }
+
+    from += PAGE_SIZE
+  }
+}
 
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
 
 export async function fetchEntriesForDate(selectedDate: string) {
-  const start = `${selectedDate}T00:00:00`
-  const end = `${selectedDate}T23:59:59`
-
-  return supabase
-    .from('time_entries')
-    .select('*')
-    .gte('start_time', start)
-    .lte('start_time', end)
-    .order('start_time', { ascending: false })
+  return fetchEntriesBetween(selectedDate, selectedDate, false)
 }
 
 export async function getSignedInUserId() {
@@ -33,16 +58,32 @@ export async function createTimerEntry(userId: string, projectId: string, startT
     .single()
 }
 
+export async function fetchActiveTimeEntry() {
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .is('end_time', null)
+    .order('start_time', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+}
+
 export async function stopTimerEntry(entryId: string, endTime: string) {
-  return supabase.from('time_entries').update({ end_time: endTime }).eq('id', entryId)
+  return supabase
+    .from('time_entries')
+    .update({ end_time: endTime })
+    .eq('id', entryId)
+    .is('end_time', null)
+    .select()
+    .single()
 }
 
 export async function deleteTimeEntry(entryId: string) {
-  return supabase.from('time_entries').delete().eq('id', entryId)
+  return supabase.from('time_entries').delete().eq('id', entryId).select('id').single()
 }
 
 export async function updateTimeEntry(entryId: string, updates: Partial<TimeEntry>) {
-  return supabase.from('time_entries').update(updates).eq('id', entryId)
+  return supabase.from('time_entries').update(updates).eq('id', entryId).select().single()
 }
 
 export async function createProjectRecord(userId: string, name: string) {
@@ -50,18 +91,13 @@ export async function createProjectRecord(userId: string, name: string) {
 }
 
 export async function deleteProjectRecord(projectId: string) {
-  return supabase.from('projects').delete().eq('id', projectId)
+  return supabase.from('projects').delete().eq('id', projectId).select('id').single()
 }
 
 export async function updateEntryDescription(entryId: string, description: string | null) {
-  return supabase.from('time_entries').update({ description }).eq('id', entryId)
+  return supabase.from('time_entries').update({ description }).eq('id', entryId).select().single()
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
-  return supabase
-    .from('time_entries')
-    .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
-    .order('start_time', { ascending: true })
+  return fetchEntriesBetween(startDate, endDate, true)
 }
