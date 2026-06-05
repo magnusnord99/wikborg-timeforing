@@ -23,7 +23,7 @@ export function TimeLogEditForm({ entry, projects, onSave, onCancel }: Props) {
     onSave({
       project_id: projectId,
       start_time: startTime ? new Date(startTime).toISOString() : entry.start_time,
-      end_time: endTime ? new Date(endTime).toISOString() : null,
+      end_time: endTime ? new Date(endTime).toISOString() : entry.end_time,
       description: description.trim() || null,
     })
   }
