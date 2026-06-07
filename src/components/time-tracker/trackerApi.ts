@@ -1,20 +1,30 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
+import { getLocalDayRange, shiftDate } from '../time-utils'
 
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
 
 export async function fetchEntriesForDate(selectedDate: string) {
-  const start = `${selectedDate}T00:00:00`
-  const end = `${selectedDate}T23:59:59`
+  const { startIso, endIso } = getLocalDayRange(selectedDate)
 
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', start)
-    .lte('start_time', end)
+    .gte('start_time', startIso)
+    .lt('start_time', endIso)
     .order('start_time', { ascending: false })
+}
+
+export async function fetchActiveEntry() {
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .is('end_time', null)
+    .order('start_time', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 }
 
 export async function getSignedInUserId() {
@@ -34,7 +44,13 @@ export async function createTimerEntry(userId: string, projectId: string, startT
 }
 
 export async function stopTimerEntry(entryId: string, endTime: string) {
-  return supabase.from('time_entries').update({ end_time: endTime }).eq('id', entryId)
+  return supabase
+    .from('time_entries')
+    .update({ end_time: endTime })
+    .eq('id', entryId)
+    .is('end_time', null)
+    .select()
+    .single()
 }
 
 export async function deleteTimeEntry(entryId: string) {
@@ -42,7 +58,7 @@ export async function deleteTimeEntry(entryId: string) {
 }
 
 export async function updateTimeEntry(entryId: string, updates: Partial<TimeEntry>) {
-  return supabase.from('time_entries').update(updates).eq('id', entryId)
+  return supabase.from('time_entries').update(updates).eq('id', entryId).select().single()
 }
 
 export async function createProjectRecord(userId: string, name: string) {
@@ -54,14 +70,17 @@ export async function deleteProjectRecord(projectId: string) {
 }
 
 export async function updateEntryDescription(entryId: string, description: string | null) {
-  return supabase.from('time_entries').update({ description }).eq('id', entryId)
+  return supabase.from('time_entries').update({ description }).eq('id', entryId).select().single()
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
+  const { startIso } = getLocalDayRange(startDate)
+  const { startIso: endIso } = getLocalDayRange(shiftDate(endDate, 1))
+
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
+    .gte('start_time', startIso)
+    .lt('start_time', endIso)
     .order('start_time', { ascending: true })
 }
