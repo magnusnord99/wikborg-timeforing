@@ -6,6 +6,7 @@ import {
   createTimerEntry,
   deleteProjectRecord,
   deleteTimeEntry,
+  fetchActiveEntry,
   fetchEntriesForDate,
   fetchEntriesForRange,
   fetchProjectsQuery,
@@ -76,18 +77,21 @@ export function useTimeTrackerData() {
 
   async function fetchEntries() {
     setLoading(true)
-    const { data, error } = await fetchEntriesForDate(selectedDate)
+    const [entriesResult, activeResult] = await Promise.all([
+      fetchEntriesForDate(selectedDate),
+      fetchActiveEntry(),
+    ])
+    const { data, error } = entriesResult
 
-    if (error) {
-      console.error('Feil ved henting av timer:', error)
+    if (error || activeResult.error) {
+      console.error('Feil ved henting av timer:', error ?? activeResult.error)
       setNotice({ type: 'error', text: 'Kunne ikke hente timer for valgt dato.' })
       setLoading(false)
       return
     }
 
-    const active = (data ?? []).find((entry) => !entry.end_time)
     setNotice(null)
-    setActiveEntry(active ?? null)
+    setActiveEntry(activeResult.data ?? null)
     setEntries(data ?? [])
     setLoading(false)
   }
@@ -133,19 +137,35 @@ export function useTimeTrackerData() {
     const userId = await getSignedInUserId()
     if (!userId) return
 
+    const { data: existingActiveEntry, error: activeError } = await fetchActiveEntry()
+    if (activeError) {
+      console.error('Feil ved sjekk av aktiv timer:', activeError)
+      setNotice({ type: 'error', text: 'Kunne ikke kontrollere aktiv timer. Prøv igjen.' })
+      return
+    }
+
+    if (existingActiveEntry) {
+      setActiveEntry(existingActiveEntry)
+      setNotice({ type: 'info', text: 'Du har allerede en aktiv timer.' })
+      return
+    }
+
     const startAt = new Date().toISOString()
     const { data, error } = await createTimerEntry(userId, projectId, startAt)
 
     if (error) {
       console.error('Feil ved start av timer:', error)
       setNotice({ type: 'error', text: 'Kunne ikke starte timeren. Prøv igjen.' })
+      await fetchEntries()
       return
     }
 
     setNotice({ type: 'info', text: 'Timer startet. Fokusmodus er aktiv.' })
     setNow(Date.now())
     setActiveEntry(data)
-    setEntries((previous) => [data, ...previous])
+    if (toDateString(new Date(data.start_time)) === selectedDate) {
+      setEntries((previous) => [data, ...previous])
+    }
   }
 
   async function stopTimer() {
@@ -162,11 +182,12 @@ export function useTimeTrackerData() {
 
     setNotice({ type: 'info', text: 'Timer stoppet.' })
     setActiveEntry(null)
-    await fetchEntries()
+    await refreshEntries()
   }
 
   async function handleStopTimer() {
-    await saveSessionNote()
+    const noteSaved = await saveSessionNote()
+    if (!noteSaved) return
     await stopTimer()
   }
 
@@ -180,7 +201,7 @@ export function useTimeTrackerData() {
     }
 
     setNotice(null)
-    await fetchEntries()
+    await refreshEntries()
   }
 
   async function updateEntry(id: string, updates: Partial<TimeEntry>) {
@@ -193,7 +214,7 @@ export function useTimeTrackerData() {
     }
 
     setNotice(null)
-    await fetchEntries()
+    await refreshEntries()
   }
 
   async function addProject(name: string) {
@@ -223,24 +244,32 @@ export function useTimeTrackerData() {
 
     setNotice(null)
     setProjects((previous) => previous.filter((project) => project.id !== id))
-    await fetchEntries()
+    await refreshEntries()
   }
 
-  async function saveSessionNote() {
-    if (!activeEntry) return
+  async function saveSessionNote(): Promise<boolean> {
+    if (!activeEntry) return true
 
     const nextNote = sessionNote.trim()
-    if ((activeEntry.description ?? '') === nextNote) return
+    if ((activeEntry.description ?? '') === nextNote) return true
 
     const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
 
     if (error) {
       console.error('Feil ved lagring av notat:', error)
       setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
-      return
+      return false
     }
 
     setActiveEntry((previous) => (previous ? { ...previous, description: nextNote || null } : previous))
+    return true
+  }
+
+  async function refreshEntries() {
+    await fetchEntries()
+    if (viewMode !== 'day') {
+      await fetchRangeEntries()
+    }
   }
 
   return {
