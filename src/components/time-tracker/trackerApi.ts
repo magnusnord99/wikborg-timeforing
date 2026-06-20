@@ -1,19 +1,19 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
+import { getDateRangeBounds } from '../time-utils'
 
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
 
 export async function fetchEntriesForDate(selectedDate: string) {
-  const start = `${selectedDate}T00:00:00`
-  const end = `${selectedDate}T23:59:59`
+  const { startIso, endIso } = getDateRangeBounds(selectedDate, selectedDate)
 
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', start)
-    .lte('start_time', end)
+    .gte('start_time', startIso)
+    .lt('start_time', endIso)
     .order('start_time', { ascending: false })
 }
 
@@ -31,6 +31,16 @@ export async function createTimerEntry(userId: string, projectId: string, startT
     .insert({ user_id: userId, project_id: projectId, start_time: startTime })
     .select()
     .single()
+}
+
+export async function fetchActiveEntry() {
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .is('end_time', null)
+    .order('start_time', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 }
 
 export async function stopTimerEntry(entryId: string, endTime: string) {
@@ -58,10 +68,12 @@ export async function updateEntryDescription(entryId: string, description: strin
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
+  const { startIso, endIso } = getDateRangeBounds(startDate, endDate)
+
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
+    .gte('start_time', startIso)
+    .lt('start_time', endIso)
     .order('start_time', { ascending: true })
 }
