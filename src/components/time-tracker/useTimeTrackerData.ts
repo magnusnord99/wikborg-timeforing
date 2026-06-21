@@ -6,6 +6,7 @@ import {
   createTimerEntry,
   deleteProjectRecord,
   deleteTimeEntry,
+  fetchActiveTimerEntry,
   fetchEntriesForDate,
   fetchEntriesForRange,
   fetchProjectsQuery,
@@ -76,19 +77,18 @@ export function useTimeTrackerData() {
 
   async function fetchEntries() {
     setLoading(true)
-    const { data, error } = await fetchEntriesForDate(selectedDate)
+    const [entriesResult, activeResult] = await Promise.all([fetchEntriesForDate(selectedDate), fetchActiveTimerEntry()])
 
-    if (error) {
-      console.error('Feil ved henting av timer:', error)
+    if (entriesResult.error || activeResult.error) {
+      console.error('Feil ved henting av timer:', entriesResult.error ?? activeResult.error)
       setNotice({ type: 'error', text: 'Kunne ikke hente timer for valgt dato.' })
       setLoading(false)
       return
     }
 
-    const active = (data ?? []).find((entry) => !entry.end_time)
     setNotice(null)
-    setActiveEntry(active ?? null)
-    setEntries(data ?? [])
+    setActiveEntry(activeResult.data ?? null)
+    setEntries(entriesResult.data ?? [])
     setLoading(false)
   }
 
@@ -130,6 +130,19 @@ export function useTimeTrackerData() {
   async function startTimer(projectId: string) {
     if (activeEntry) return
 
+    const { data: currentActive, error: activeError } = await fetchActiveTimerEntry()
+    if (activeError) {
+      console.error('Feil ved kontroll av aktiv timer:', activeError)
+      setNotice({ type: 'error', text: 'Kunne ikke kontrollere aktiv timer. Prøv igjen.' })
+      return
+    }
+
+    if (currentActive) {
+      setActiveEntry(currentActive)
+      setNotice({ type: 'error', text: 'Du har allerede en aktiv timer.' })
+      return
+    }
+
     const userId = await getSignedInUserId()
     if (!userId) return
 
@@ -166,7 +179,9 @@ export function useTimeTrackerData() {
   }
 
   async function handleStopTimer() {
-    await saveSessionNote()
+    const noteSaved = await saveSessionNote()
+    if (!noteSaved) return
+
     await stopTimer()
   }
 
@@ -213,6 +228,11 @@ export function useTimeTrackerData() {
   }
 
   async function removeProject(id: string) {
+    if (activeEntry?.project_id === id) {
+      setNotice({ type: 'error', text: 'Stopp aktiv timer før du fjerner prosjektet.' })
+      return
+    }
+
     const { error } = await deleteProjectRecord(id)
 
     if (error) {
@@ -226,21 +246,22 @@ export function useTimeTrackerData() {
     await fetchEntries()
   }
 
-  async function saveSessionNote() {
-    if (!activeEntry) return
+  async function saveSessionNote(): Promise<boolean> {
+    if (!activeEntry) return true
 
     const nextNote = sessionNote.trim()
-    if ((activeEntry.description ?? '') === nextNote) return
+    if ((activeEntry.description ?? '') === nextNote) return true
 
     const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
 
     if (error) {
       console.error('Feil ved lagring av notat:', error)
       setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
-      return
+      return false
     }
 
     setActiveEntry((previous) => (previous ? { ...previous, description: nextNote || null } : previous))
+    return true
   }
 
   return {
