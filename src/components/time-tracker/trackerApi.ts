@@ -1,20 +1,31 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
+import { getLocalDayStartIso, getNextLocalDayStartIso } from '../time-utils'
 
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
 
 export async function fetchEntriesForDate(selectedDate: string) {
-  const start = `${selectedDate}T00:00:00`
-  const end = `${selectedDate}T23:59:59`
+  const start = getLocalDayStartIso(selectedDate)
+  const end = getNextLocalDayStartIso(selectedDate)
 
   return supabase
     .from('time_entries')
     .select('*')
     .gte('start_time', start)
-    .lte('start_time', end)
+    .lt('start_time', end)
     .order('start_time', { ascending: false })
+}
+
+export async function fetchActiveTimerEntry() {
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .is('end_time', null)
+    .order('start_time', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 }
 
 export async function getSignedInUserId() {
@@ -34,7 +45,7 @@ export async function createTimerEntry(userId: string, projectId: string, startT
 }
 
 export async function stopTimerEntry(entryId: string, endTime: string) {
-  return supabase.from('time_entries').update({ end_time: endTime }).eq('id', entryId)
+  return supabase.from('time_entries').update({ end_time: endTime }).eq('id', entryId).select().single()
 }
 
 export async function deleteTimeEntry(entryId: string) {
@@ -54,14 +65,17 @@ export async function deleteProjectRecord(projectId: string) {
 }
 
 export async function updateEntryDescription(entryId: string, description: string | null) {
-  return supabase.from('time_entries').update({ description }).eq('id', entryId)
+  return supabase.from('time_entries').update({ description }).eq('id', entryId).select().single()
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
+  const start = getLocalDayStartIso(startDate)
+  const end = getNextLocalDayStartIso(endDate)
+
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
+    .gte('start_time', start)
+    .lt('start_time', end)
     .order('start_time', { ascending: true })
 }
