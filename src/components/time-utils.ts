@@ -1,13 +1,26 @@
 import type { TimeEntry } from '../types'
 
 export function toDateString(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export function shiftDate(dateString: string, days: number): string {
-  const date = new Date(`${dateString}T12:00:00`)
-  date.setDate(date.getDate() + days)
+  const [year, month, day] = dateString.split('-').map(Number)
+  const date = new Date(year, month - 1, day + days)
   return toDateString(date)
+}
+
+export function getLocalDayStartIso(dateString: string): string {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day).toISOString()
+}
+
+export function getNextLocalDayStartIso(dateString: string): string {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return new Date(year, month - 1, day + 1).toISOString()
 }
 
 export function getMinutesBetween(start: string, end: string): number {
@@ -107,7 +120,7 @@ export function toMonthString(date: string): string {
 export function groupEntriesByDate(entries: TimeEntry[]): Map<string, TimeEntry[]> {
   const map = new Map<string, TimeEntry[]>()
   for (const entry of entries) {
-    const key = entry.start_time.slice(0, 10)
+    const key = toDateString(new Date(entry.start_time))
     const existing = map.get(key)
     if (existing) {
       existing.push(entry)
