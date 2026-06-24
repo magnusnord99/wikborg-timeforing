@@ -159,9 +159,9 @@ export function useTimeTrackerData() {
     if (!activeEntry) return
 
     const endAt = new Date().toISOString()
-    const { error } = await stopTimerEntry(activeEntry.id, endAt)
+    const { data, error } = await stopTimerEntry(activeEntry.id, endAt)
 
-    if (error) {
+    if (error || !data) {
       console.error('Feil ved stopp av timer:', error)
       setNotice({ type: 'error', text: 'Kunne ikke stoppe timeren. Prøv igjen.' })
       return
@@ -173,14 +173,15 @@ export function useTimeTrackerData() {
   }
 
   async function handleStopTimer() {
-    await saveSessionNote()
+    const noteSaved = await saveSessionNote()
+    if (!noteSaved) return
     await stopTimer()
   }
 
   async function deleteEntry(id: string) {
-    const { error } = await deleteTimeEntry(id)
+    const { data, error } = await deleteTimeEntry(id)
 
-    if (error) {
+    if (error || !data) {
       console.error('Feil ved sletting:', error)
       setNotice({ type: 'error', text: 'Kunne ikke slette timen.' })
       return
@@ -191,9 +192,9 @@ export function useTimeTrackerData() {
   }
 
   async function updateEntry(id: string, updates: Partial<TimeEntry>) {
-    const { error } = await updateTimeEntry(id, updates)
+    const { data, error } = await updateTimeEntry(id, updates)
 
-    if (error) {
+    if (error || !data) {
       console.error('Feil ved oppdatering:', error)
       setNotice({ type: 'error', text: 'Kunne ikke oppdatere timen.' })
       return
@@ -220,9 +221,9 @@ export function useTimeTrackerData() {
   }
 
   async function removeProject(id: string) {
-    const { error } = await deleteProjectRecord(id)
+    const { data, error } = await deleteProjectRecord(id)
 
-    if (error) {
+    if (error || !data) {
       console.error('Feil ved sletting av prosjekt:', error)
       setNotice({ type: 'error', text: 'Kunne ikke fjerne prosjektet.' })
       return
@@ -234,20 +235,21 @@ export function useTimeTrackerData() {
   }
 
   async function saveSessionNote() {
-    if (!activeEntry) return
+    if (!activeEntry) return true
 
     const nextNote = sessionNote.trim()
-    if ((activeEntry.description ?? '') === nextNote) return
+    if ((activeEntry.description ?? '') === nextNote) return true
 
-    const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
+    const { data, error } = await updateEntryDescription(activeEntry.id, nextNote || null)
 
-    if (error) {
+    if (error || !data) {
       console.error('Feil ved lagring av notat:', error)
       setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
-      return
+      return false
     }
 
     setActiveEntry((previous) => (previous ? { ...previous, description: nextNote || null } : previous))
+    return true
   }
 
   return {
