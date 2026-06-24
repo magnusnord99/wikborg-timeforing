@@ -1,7 +1,11 @@
 import type { TimeEntry } from '../types'
 
+function padDatePart(value: number): string {
+  return value.toString().padStart(2, '0')
+}
+
 export function toDateString(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`
 }
 
 export function shiftDate(dateString: string, days: number): string {
@@ -96,18 +100,29 @@ export function getMonthStart(month: string): string {
 
 export function getMonthEnd(month: string): string {
   const [year, mon] = month.split('-').map(Number)
-  const date = new Date(year, mon, 0)
-  return toDateString(date)
+  const lastDay = new Date(year, mon, 0).getDate()
+  return `${year}-${padDatePart(mon)}-${padDatePart(lastDay)}`
 }
 
 export function toMonthString(date: string): string {
   return date.slice(0, 7)
 }
 
+export function getLocalDateRangeIsoBounds(startDate: string, endDate: string) {
+  const start = new Date(`${startDate}T00:00:00`)
+  const endExclusive = new Date(`${endDate}T00:00:00`)
+  endExclusive.setDate(endExclusive.getDate() + 1)
+
+  return {
+    startIso: start.toISOString(),
+    endExclusiveIso: endExclusive.toISOString(),
+  }
+}
+
 export function groupEntriesByDate(entries: TimeEntry[]): Map<string, TimeEntry[]> {
   const map = new Map<string, TimeEntry[]>()
   for (const entry of entries) {
-    const key = entry.start_time.slice(0, 10)
+    const key = toDateString(new Date(entry.start_time))
     const existing = map.get(key)
     if (existing) {
       existing.push(entry)

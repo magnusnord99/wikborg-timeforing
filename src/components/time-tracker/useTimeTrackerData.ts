@@ -110,6 +110,13 @@ export function useTimeTrackerData() {
     setRangeLoading(false)
   }
 
+  async function refreshVisibleEntries() {
+    await fetchEntries()
+    if (viewMode !== 'day') {
+      await fetchRangeEntries()
+    }
+  }
+
   function handleDayClick(date: string) {
     setSelectedDate(date)
     setViewMode('day')
@@ -122,8 +129,8 @@ export function useTimeTrackerData() {
   function handleMonthNav(direction: -1 | 1) {
     setSelectedMonth((prev) => {
       const [year, month] = prev.split('-').map(Number)
-      const date = new Date(year, month - 1 + direction, 1)
-      return toMonthString(toDateString(date))
+      const date = new Date(year, month - 1 + direction, 15)
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
     })
   }
 
@@ -162,7 +169,7 @@ export function useTimeTrackerData() {
 
     setNotice({ type: 'info', text: 'Timer stoppet.' })
     setActiveEntry(null)
-    await fetchEntries()
+    await refreshVisibleEntries()
   }
 
   async function handleStopTimer() {
@@ -180,7 +187,7 @@ export function useTimeTrackerData() {
     }
 
     setNotice(null)
-    await fetchEntries()
+    await refreshVisibleEntries()
   }
 
   async function updateEntry(id: string, updates: Partial<TimeEntry>) {
@@ -193,7 +200,7 @@ export function useTimeTrackerData() {
     }
 
     setNotice(null)
-    await fetchEntries()
+    await refreshVisibleEntries()
   }
 
   async function addProject(name: string) {
@@ -223,7 +230,7 @@ export function useTimeTrackerData() {
 
     setNotice(null)
     setProjects((previous) => previous.filter((project) => project.id !== id))
-    await fetchEntries()
+    await refreshVisibleEntries()
   }
 
   async function saveSessionNote() {
