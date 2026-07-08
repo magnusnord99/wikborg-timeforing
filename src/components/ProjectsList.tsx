@@ -8,6 +8,7 @@ interface Props {
   projects: Project[]
   onAdd: (name: string) => void
   onRemove: (id: string) => void
+  onRename: (id: string, name: string) => void
   activeEntry: TimeEntry | null
   onStart: (projectId: string) => void
   onStop: () => void
@@ -17,12 +18,14 @@ export function ProjectsList({
   projects,
   onAdd,
   onRemove,
+  onRename,
   activeEntry,
   onStart,
   onStop,
 }: Props) {
   const [newName, setNewName] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
 
   function handleAdd(e: FormEvent) {
     e.preventDefault()
@@ -71,6 +74,7 @@ export function ProjectsList({
             project={project}
             activeEntry={activeEntry}
             confirmDelete={confirmDelete === project.id}
+            isEditing={editingProjectId === project.id}
             onStart={() => onStart(project.id)}
             onStop={onStop}
             onRequestDelete={() => setConfirmDelete(project.id)}
@@ -78,6 +82,12 @@ export function ProjectsList({
             onRemove={() => {
               onRemove(project.id)
               setConfirmDelete(null)
+            }}
+            onRequestEdit={() => setEditingProjectId(project.id)}
+            onCancelEdit={() => setEditingProjectId(null)}
+            onSaveEdit={(name) => {
+              onRename(project.id, name)
+              setEditingProjectId(null)
             }}
           />
         ))}

@@ -7,6 +7,7 @@ interface Props {
   activeEntry: TimeEntry | null
   onAddProject: (name: string) => void
   onRemoveProject: (id: string) => void
+  onRenameProject: (id: string, name: string) => void
   onStartTimer: (projectId: string) => void
   onStopTimer: () => void
 }
@@ -16,6 +17,7 @@ export function ProjectsPanel({
   activeEntry,
   onAddProject,
   onRemoveProject,
+  onRenameProject,
   onStartTimer,
   onStopTimer,
 }: Props) {
@@ -32,6 +34,7 @@ export function ProjectsPanel({
         projects={projects}
         onAdd={onAddProject}
         onRemove={onRemoveProject}
+        onRename={onRenameProject}
         activeEntry={activeEntry}
         onStart={onStartTimer}
         onStop={onStopTimer}
