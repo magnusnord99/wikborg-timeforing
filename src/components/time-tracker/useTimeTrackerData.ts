@@ -12,6 +12,7 @@ import {
   getSignedInUserId,
   stopTimerEntry,
   updateEntryDescription,
+  updateProjectRecord,
   updateTimeEntry,
 } from './trackerApi'
 import type { PanelId, TrackerNotice, ViewMode } from './types'
@@ -226,6 +227,23 @@ export function useTimeTrackerData() {
     await fetchEntries()
   }
 
+  async function renameProject(id: string, name: string) {
+    const { error } = await updateProjectRecord(id, name)
+
+    if (error) {
+      console.error('Feil ved endring av prosjektnavn:', error)
+      setNotice({ type: 'error', text: 'Kunne ikke endre prosjektnavnet.' })
+      return
+    }
+
+    setNotice(null)
+    setProjects((previous) =>
+      previous
+        .map((project) => (project.id === id ? { ...project, name } : project))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    )
+  }
+
   async function saveSessionNote() {
     if (!activeEntry) return
 
@@ -272,6 +290,7 @@ export function useTimeTrackerData() {
     updateEntry,
     addProject,
     removeProject,
+    renameProject,
     saveSessionNote,
   }
 }

@@ -53,6 +53,10 @@ export async function deleteProjectRecord(projectId: string) {
   return supabase.from('projects').delete().eq('id', projectId)
 }
 
+export async function updateProjectRecord(projectId: string, name: string) {
+  return supabase.from('projects').update({ name }).eq('id', projectId).select().single()
+}
+
 export async function updateEntryDescription(entryId: string, description: string | null) {
   return supabase.from('time_entries').update({ description }).eq('id', entryId)
 }

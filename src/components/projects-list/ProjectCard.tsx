@@ -1,4 +1,5 @@
-import { Check, Play, Square, Trash2, X } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
+import { Check, Pencil, Play, Square, Trash2, X } from 'lucide-react'
 import type { Project, TimeEntry } from '../../types'
 import { styles } from './projectsListStyles'
 
@@ -6,30 +7,86 @@ interface Props {
   project: Project
   activeEntry: TimeEntry | null
   confirmDelete: boolean
+  isEditing: boolean
   onStart: () => void
   onStop: () => void
   onRequestDelete: () => void
   onCancelDelete: () => void
   onRemove: () => void
+  onRequestEdit: () => void
+  onCancelEdit: () => void
+  onSaveEdit: (name: string) => void
 }
 
 export function ProjectCard({
   project,
   activeEntry,
   confirmDelete,
+  isEditing,
   onStart,
   onStop,
   onRequestDelete,
   onCancelDelete,
   onRemove,
+  onRequestEdit,
+  onCancelEdit,
+  onSaveEdit,
 }: Props) {
+  const [editValue, setEditValue] = useState(project.name)
   const isActive = activeEntry?.project_id === project.id
+
+  function handleSaveEdit(e: FormEvent) {
+    e.preventDefault()
+    const trimmed = editValue.trim()
+    if (!trimmed || trimmed === project.name) {
+      onCancelEdit()
+      return
+    }
+    onSaveEdit(trimmed)
+  }
+
+  if (isEditing) {
+    return (
+      <li style={styles.item}>
+        <form onSubmit={handleSaveEdit} style={styles.editForm}>
+          <input
+            type="text"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            autoFocus
+            style={styles.editInput}
+          />
+          <div style={styles.actions}>
+            <button type="submit" style={styles.button}>
+              <Check size={15} />
+              <span>Lagre</span>
+            </button>
+            <button type="button" onClick={onCancelEdit} style={styles.ghostButton}>
+              <X size={15} />
+              <span>Avbryt</span>
+            </button>
+          </div>
+        </form>
+      </li>
+    )
+  }
 
   return (
     <li style={styles.item}>
       <div style={styles.projectInfo}>
         <div style={styles.projectHeader}>
           <span style={styles.projectName}>{project.name}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setEditValue(project.name)
+              onRequestEdit()
+            }}
+            style={styles.iconButton}
+            aria-label="Rediger prosjektnavn"
+          >
+            <Pencil size={14} />
+          </button>
           {isActive && (
             <span style={styles.activeBadge}>
               <Play size={12} />

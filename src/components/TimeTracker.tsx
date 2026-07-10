@@ -52,6 +52,9 @@ export function TimeTracker() {
       entries={tracker.entries}
       projects={tracker.projects}
       totalCompletedMinutes={totalCompletedMinutes}
+      selectedDate={tracker.selectedDate}
+      isToday={isToday}
+      onDateChange={tracker.setSelectedDate}
     />
   )
 
@@ -81,6 +84,7 @@ export function TimeTracker() {
         activeEntry={tracker.activeEntry}
         onAddProject={(name) => void tracker.addProject(name)}
         onRemoveProject={(id) => void tracker.removeProject(id)}
+        onRenameProject={(id, name) => void tracker.renameProject(id, name)}
         onStartTimer={(projectId) => void tracker.startTimer(projectId)}
         onStopTimer={() => void tracker.handleStopTimer()}
       />
