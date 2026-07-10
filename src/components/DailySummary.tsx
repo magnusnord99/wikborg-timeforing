@@ -4,9 +4,10 @@ import type { Project, TimeEntry } from '../types'
 interface Props {
   entries: TimeEntry[]
   projects: Project[]
+  isToday: boolean
 }
 
-export function DailySummary({ entries, projects }: Props) {
+export function DailySummary({ entries, projects, isToday }: Props) {
   const [expandedProject, setExpandedProject] = useState<string | null>(null)
   const completed = entries.filter((e) => e.end_time)
   const byProject = new Map<string, { project: Project; minutes: number; entries: TimeEntry[] }>()
@@ -33,7 +34,7 @@ export function DailySummary({ entries, projects }: Props) {
   if (totalMinutes === 0) {
     return (
       <p style={{ color: '#94a3b8', margin: 0 }}>
-        Ingen fullførte timer i dag ennå.
+        {isToday ? 'Ingen fullførte timer i dag ennå.' : 'Ingen fullførte timer denne dagen.'}
       </p>
     )
   }
@@ -41,7 +42,7 @@ export function DailySummary({ entries, projects }: Props) {
   return (
     <div>
       <div style={styles.total}>
-        <strong>Totalt i dag:</strong> {formatHours(totalMinutes)}
+        <strong>{isToday ? 'Totalt i dag:' : 'Totalt denne dagen:'}</strong> {formatHours(totalMinutes)}
       </div>
       <ul style={styles.list}>
         {[...byProject.values()]

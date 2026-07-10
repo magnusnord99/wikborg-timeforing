@@ -52,6 +52,9 @@ export function TimeTracker() {
       entries={tracker.entries}
       projects={tracker.projects}
       totalCompletedMinutes={totalCompletedMinutes}
+      selectedDate={tracker.selectedDate}
+      isToday={isToday}
+      onDateChange={tracker.setSelectedDate}
     />
   )
 
