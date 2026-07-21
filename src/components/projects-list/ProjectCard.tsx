@@ -131,6 +131,7 @@ export function ProjectCard({
           <button
             type="button"
             onClick={onRequestDelete}
+            disabled={isActive}
             style={{ ...styles.ghostButton, ...styles.removeButton }}
           >
             <Trash2 size={15} />
