@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Project, TimeEntry } from '../../types'
-import { formatHours, getMinutesBetween, groupEntriesByDate, shiftDate, toDateString } from '../time-utils'
+import { formatHours, getMinutesBetween, groupEntriesByDate, parseLocalDate, shiftDate, toDateString } from '../time-utils'
 
 interface Props {
   weekStart: string
@@ -13,7 +13,7 @@ interface Props {
 }
 
 function getISOWeekNumber(dateStr: string): number {
-  const date = new Date(`${dateStr}T12:00:00`)
+  const date = parseLocalDate(dateStr)
   const thursday = new Date(date)
   thursday.setDate(date.getDate() - ((date.getDay() + 6) % 7) + 3)
   const firstThursday = new Date(thursday.getFullYear(), 0, 4)
@@ -21,12 +21,12 @@ function getISOWeekNumber(dateStr: string): number {
 }
 
 function formatShortDate(dateStr: string): string {
-  const date = new Date(`${dateStr}T12:00:00`)
+  const date = parseLocalDate(dateStr)
   return date.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 function formatShortMonth(dateStr: string): string {
-  const date = new Date(`${dateStr}T12:00:00`)
+  const date = parseLocalDate(dateStr)
   return date.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })
 }
 
@@ -39,7 +39,7 @@ export function WeekView({ weekStart, entries, projects, loading, onDayClick, on
   const completed = entries.filter((e) => e.end_time)
   const byDate = groupEntriesByDate(completed)
 
-  const weekYear = new Date(`${weekStart}T12:00:00`).getFullYear()
+  const weekYear = parseLocalDate(weekStart).getFullYear()
   const weekLabel = `Uke ${weekNum}, ${formatShortMonth(weekStart)}–${formatShortMonth(weekEnd)} ${weekYear}`
 
   const allProjectMinutes = new Map<string, number>()
