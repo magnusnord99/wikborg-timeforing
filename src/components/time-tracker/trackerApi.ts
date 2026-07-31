@@ -1,19 +1,19 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
+import { getLocalDateRangeIsoBounds } from '../time-utils'
 
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
 
 export async function fetchEntriesForDate(selectedDate: string) {
-  const start = `${selectedDate}T00:00:00`
-  const end = `${selectedDate}T23:59:59`
+  const { startIso, endExclusiveIso } = getLocalDateRangeIsoBounds(selectedDate, selectedDate)
 
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', start)
-    .lte('start_time', end)
+    .gte('start_time', startIso)
+    .lt('start_time', endExclusiveIso)
     .order('start_time', { ascending: false })
 }
 
@@ -34,15 +34,25 @@ export async function createTimerEntry(userId: string, projectId: string, startT
 }
 
 export async function stopTimerEntry(entryId: string, endTime: string) {
-  return supabase.from('time_entries').update({ end_time: endTime }).eq('id', entryId)
+  return supabase
+    .from('time_entries')
+    .update({ end_time: endTime })
+    .eq('id', entryId)
+    .select('id')
+    .maybeSingle()
 }
 
 export async function deleteTimeEntry(entryId: string) {
-  return supabase.from('time_entries').delete().eq('id', entryId)
+  return supabase.from('time_entries').delete().eq('id', entryId).select('id').maybeSingle()
 }
 
 export async function updateTimeEntry(entryId: string, updates: Partial<TimeEntry>) {
-  return supabase.from('time_entries').update(updates).eq('id', entryId)
+  return supabase
+    .from('time_entries')
+    .update(updates)
+    .eq('id', entryId)
+    .select('id')
+    .maybeSingle()
 }
 
 export async function createProjectRecord(userId: string, name: string) {
@@ -50,7 +60,7 @@ export async function createProjectRecord(userId: string, name: string) {
 }
 
 export async function deleteProjectRecord(projectId: string) {
-  return supabase.from('projects').delete().eq('id', projectId)
+  return supabase.from('projects').delete().eq('id', projectId).select('id').maybeSingle()
 }
 
 export async function updateProjectRecord(projectId: string, name: string) {
@@ -58,14 +68,21 @@ export async function updateProjectRecord(projectId: string, name: string) {
 }
 
 export async function updateEntryDescription(entryId: string, description: string | null) {
-  return supabase.from('time_entries').update({ description }).eq('id', entryId)
+  return supabase
+    .from('time_entries')
+    .update({ description })
+    .eq('id', entryId)
+    .select('id')
+    .maybeSingle()
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
+  const { startIso, endExclusiveIso } = getLocalDateRangeIsoBounds(startDate, endDate)
+
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
+    .gte('start_time', startIso)
+    .lt('start_time', endExclusiveIso)
     .order('start_time', { ascending: true })
 }
