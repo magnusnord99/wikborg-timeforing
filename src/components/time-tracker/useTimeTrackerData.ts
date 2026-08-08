@@ -6,6 +6,7 @@ import {
   createTimerEntry,
   deleteProjectRecord,
   deleteTimeEntry,
+  fetchActiveEntry,
   fetchEntriesForDate,
   fetchEntriesForRange,
   fetchProjectsQuery,
@@ -77,7 +78,11 @@ export function useTimeTrackerData() {
 
   async function fetchEntries() {
     setLoading(true)
-    const { data, error } = await fetchEntriesForDate(selectedDate)
+    const [entriesResult, activeResult] = await Promise.all([
+      fetchEntriesForDate(selectedDate),
+      fetchActiveEntry(),
+    ])
+    const { data, error } = entriesResult
 
     if (error) {
       console.error('Feil ved henting av timer:', error)
@@ -86,11 +91,30 @@ export function useTimeTrackerData() {
       return
     }
 
-    const active = (data ?? []).find((entry) => !entry.end_time)
+    if (activeResult.error) {
+      console.error('Feil ved henting av aktiv timer:', activeResult.error)
+      setNotice({ type: 'error', text: 'Kunne ikke hente aktiv timer.' })
+      setLoading(false)
+      return
+    }
+
     setNotice(null)
-    setActiveEntry(active ?? null)
+    setActiveEntry(activeResult.data ?? null)
     setEntries(data ?? [])
     setLoading(false)
+  }
+
+  async function refreshActiveEntry() {
+    const { data, error } = await fetchActiveEntry()
+
+    if (error) {
+      console.error('Feil ved henting av aktiv timer:', error)
+      setNotice({ type: 'error', text: 'Kunne ikke kontrollere aktiv timer.' })
+      return null
+    }
+
+    setActiveEntry(data ?? null)
+    return data ?? null
   }
 
   async function fetchRangeEntries() {
@@ -131,6 +155,12 @@ export function useTimeTrackerData() {
   async function startTimer(projectId: string) {
     if (activeEntry) return
 
+    const existingActiveEntry = await refreshActiveEntry()
+    if (existingActiveEntry) {
+      setNotice({ type: 'error', text: 'Det kjører allerede en timer. Stopp den før du starter en ny.' })
+      return
+    }
+
     const userId = await getSignedInUserId()
     if (!userId) return
 
@@ -146,14 +176,15 @@ export function useTimeTrackerData() {
     setNotice({ type: 'info', text: 'Timer startet. Fokusmodus er aktiv.' })
     setNow(Date.now())
     setActiveEntry(data)
-    setEntries((previous) => [data, ...previous])
+    await fetchEntries()
   }
 
   async function stopTimer() {
-    if (!activeEntry) return
+    const entryToStop = activeEntry ?? (await refreshActiveEntry())
+    if (!entryToStop) return
 
     const endAt = new Date().toISOString()
-    const { error } = await stopTimerEntry(activeEntry.id, endAt)
+    const { error } = await stopTimerEntry(entryToStop.id, endAt)
 
     if (error) {
       console.error('Feil ved stopp av timer:', error)
@@ -167,11 +198,19 @@ export function useTimeTrackerData() {
   }
 
   async function handleStopTimer() {
-    await saveSessionNote()
+    const noteSaved = await saveSessionNote()
+    if (!noteSaved) return
+
     await stopTimer()
   }
 
   async function deleteEntry(id: string) {
+    const currentActiveEntry = activeEntry ?? (await refreshActiveEntry())
+    if (currentActiveEntry?.id === id) {
+      setNotice({ type: 'error', text: 'Stopp aktiv timer før du sletter den.' })
+      return
+    }
+
     const { error } = await deleteTimeEntry(id)
 
     if (error) {
@@ -185,6 +224,11 @@ export function useTimeTrackerData() {
   }
 
   async function updateEntry(id: string, updates: Partial<TimeEntry>) {
+    if (updates.end_time === null) {
+      setNotice({ type: 'error', text: 'En avsluttet time kan ikke åpnes igjen manuelt.' })
+      return
+    }
+
     const { error } = await updateTimeEntry(id, updates)
 
     if (error) {
@@ -214,6 +258,12 @@ export function useTimeTrackerData() {
   }
 
   async function removeProject(id: string) {
+    const currentActiveEntry = activeEntry ?? (await refreshActiveEntry())
+    if (currentActiveEntry?.project_id === id) {
+      setNotice({ type: 'error', text: 'Stopp aktiv timer før du fjerner prosjektet.' })
+      return
+    }
+
     const { error } = await deleteProjectRecord(id)
 
     if (error) {
@@ -245,20 +295,21 @@ export function useTimeTrackerData() {
   }
 
   async function saveSessionNote() {
-    if (!activeEntry) return
+    if (!activeEntry) return true
 
     const nextNote = sessionNote.trim()
-    if ((activeEntry.description ?? '') === nextNote) return
+    if ((activeEntry.description ?? '') === nextNote) return true
 
     const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
 
     if (error) {
       console.error('Feil ved lagring av notat:', error)
       setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
-      return
+      return false
     }
 
     setActiveEntry((previous) => (previous ? { ...previous, description: nextNote || null } : previous))
+    return true
   }
 
   return {

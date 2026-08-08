@@ -17,6 +17,16 @@ export async function fetchEntriesForDate(selectedDate: string) {
     .order('start_time', { ascending: false })
 }
 
+export async function fetchActiveEntry() {
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .is('end_time', null)
+    .order('start_time', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+}
+
 export async function getSignedInUserId() {
   const {
     data: { user },
@@ -34,15 +44,15 @@ export async function createTimerEntry(userId: string, projectId: string, startT
 }
 
 export async function stopTimerEntry(entryId: string, endTime: string) {
-  return supabase.from('time_entries').update({ end_time: endTime }).eq('id', entryId)
+  return supabase.from('time_entries').update({ end_time: endTime }).eq('id', entryId).select().single()
 }
 
 export async function deleteTimeEntry(entryId: string) {
-  return supabase.from('time_entries').delete().eq('id', entryId)
+  return supabase.from('time_entries').delete().eq('id', entryId).select('id').single()
 }
 
 export async function updateTimeEntry(entryId: string, updates: Partial<TimeEntry>) {
-  return supabase.from('time_entries').update(updates).eq('id', entryId)
+  return supabase.from('time_entries').update(updates).eq('id', entryId).select().single()
 }
 
 export async function createProjectRecord(userId: string, name: string) {
@@ -50,7 +60,7 @@ export async function createProjectRecord(userId: string, name: string) {
 }
 
 export async function deleteProjectRecord(projectId: string) {
-  return supabase.from('projects').delete().eq('id', projectId)
+  return supabase.from('projects').delete().eq('id', projectId).select('id').single()
 }
 
 export async function updateProjectRecord(projectId: string, name: string) {
@@ -58,7 +68,7 @@ export async function updateProjectRecord(projectId: string, name: string) {
 }
 
 export async function updateEntryDescription(entryId: string, description: string | null) {
-  return supabase.from('time_entries').update({ description }).eq('id', entryId)
+  return supabase.from('time_entries').update({ description }).eq('id', entryId).select().single()
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
