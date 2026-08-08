@@ -111,6 +111,13 @@ export function useTimeTrackerData() {
     setRangeLoading(false)
   }
 
+  async function refreshVisibleEntries() {
+    await fetchEntries()
+    if (viewMode !== 'day') {
+      await fetchRangeEntries()
+    }
+  }
+
   function handleDayClick(date: string) {
     setSelectedDate(date)
     setViewMode('day')
@@ -163,7 +170,7 @@ export function useTimeTrackerData() {
 
     setNotice({ type: 'info', text: 'Timer stoppet.' })
     setActiveEntry(null)
-    await fetchEntries()
+    await refreshVisibleEntries()
   }
 
   async function handleStopTimer() {
@@ -181,7 +188,7 @@ export function useTimeTrackerData() {
     }
 
     setNotice(null)
-    await fetchEntries()
+    await refreshVisibleEntries()
   }
 
   async function updateEntry(id: string, updates: Partial<TimeEntry>) {
@@ -194,7 +201,7 @@ export function useTimeTrackerData() {
     }
 
     setNotice(null)
-    await fetchEntries()
+    await refreshVisibleEntries()
   }
 
   async function addProject(name: string) {
@@ -224,7 +231,7 @@ export function useTimeTrackerData() {
 
     setNotice(null)
     setProjects((previous) => previous.filter((project) => project.id !== id))
-    await fetchEntries()
+    await refreshVisibleEntries()
   }
 
   async function renameProject(id: string, name: string) {
