@@ -10,8 +10,10 @@ interface Props {
   isActive: boolean
   confirmDelete: boolean
   now: number
+  activeComment: string
   onEdit: () => void
-  onSaveComment: (description: string | null) => void
+  onActiveCommentChange: (description: string) => void
+  onSaveActiveComment: () => void
   onRequestDelete: () => void
   onCancelDelete: () => void
   onDelete: () => void
@@ -23,8 +25,10 @@ export function TimeLogItem({
   isActive,
   confirmDelete,
   now,
+  activeComment,
   onEdit,
-  onSaveComment,
+  onActiveCommentChange,
+  onSaveActiveComment,
   onRequestDelete,
   onCancelDelete,
   onDelete,
@@ -67,8 +71,9 @@ export function TimeLogItem({
           <>
             <span style={styles.inlineHint}>Kommentar lagres automatisk når du klikker ut av feltet.</span>
             <CommentInput
-              value={entry.description ?? ''}
-              onSave={(description) => onSaveComment(description || null)}
+              value={activeComment}
+              onChange={onActiveCommentChange}
+              onSave={onSaveActiveComment}
               placeholder="Hva jobber du med akkurat nå?"
             />
           </>

@@ -19,11 +19,12 @@ export function TimeLogEditForm({ entry, projects, onSave, onCancel }: Props) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const nextEndTime = endTime ? new Date(endTime).toISOString() : entry.end_time
 
     onSave({
       project_id: projectId,
       start_time: startTime ? new Date(startTime).toISOString() : entry.start_time,
-      end_time: endTime ? new Date(endTime).toISOString() : null,
+      end_time: nextEndTime,
       description: description.trim() || null,
     })
   }
@@ -56,6 +57,7 @@ export function TimeLogEditForm({ entry, projects, onSave, onCancel }: Props) {
         onChange={(event) => setEndTime(event.target.value)}
         style={styles.input}
         placeholder="Sluttid"
+        required={!!entry.end_time}
       />
       <div style={styles.editActions}>
         <button type="submit" style={styles.saveButton}>

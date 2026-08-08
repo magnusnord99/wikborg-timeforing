@@ -9,12 +9,25 @@ interface Props {
   entries: TimeEntry[]
   projects: Project[]
   activeEntry: TimeEntry | null
+  sessionNote: string
+  onSessionNoteChange: (value: string) => void
+  onSaveSessionNote: () => void
   onEdit: (id: string, updates: Partial<TimeEntry>) => void
   onDelete: (id: string) => void
   now: number
 }
 
-export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now }: Props) {
+export function TimeLog({
+  entries,
+  projects,
+  activeEntry,
+  sessionNote,
+  onSessionNoteChange,
+  onSaveSessionNote,
+  onEdit,
+  onDelete,
+  now,
+}: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
@@ -56,8 +69,10 @@ export function TimeLog({ entries, projects, activeEntry, onEdit, onDelete, now 
                 isActive={isActive}
                 confirmDelete={confirmDeleteId === entry.id}
                 now={now}
+                activeComment={isActive ? sessionNote : entry.description ?? ''}
                 onEdit={() => setEditingId(entry.id)}
-                onSaveComment={(description) => onEdit(entry.id, { description })}
+                onActiveCommentChange={onSessionNoteChange}
+                onSaveActiveComment={onSaveSessionNote}
                 onRequestDelete={() => setConfirmDeleteId(entry.id)}
                 onCancelDelete={() => setConfirmDeleteId(null)}
                 onDelete={() => {
