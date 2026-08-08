@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Project, TimeEntry } from '../../types'
 import { getMonthEnd, getMonthStart, getWeekEnd, getWeekStart, shiftDate, toDateString, toMonthString } from '../time-utils'
 import {
@@ -6,6 +6,7 @@ import {
   createTimerEntry,
   deleteProjectRecord,
   deleteTimeEntry,
+  fetchActiveTimerEntry,
   fetchEntriesForDate,
   fetchEntriesForRange,
   fetchProjectsQuery,
@@ -32,6 +33,8 @@ export function useTimeTrackerData() {
   const [selectedMonth, setSelectedMonth] = useState(() => toMonthString(toDateString(new Date())))
   const [rangeEntries, setRangeEntries] = useState<TimeEntry[]>([])
   const [rangeLoading, setRangeLoading] = useState(false)
+  const entriesRequestId = useRef(0)
+  const rangeRequestId = useRef(0)
 
   useEffect(() => {
     void fetchProjects()
@@ -76,28 +79,43 @@ export function useTimeTrackerData() {
   }
 
   async function fetchEntries() {
+    const requestId = ++entriesRequestId.current
+    const date = selectedDate
     setLoading(true)
-    const { data, error } = await fetchEntriesForDate(selectedDate)
+    const [entriesResult, activeResult] = await Promise.all([
+      fetchEntriesForDate(date),
+      fetchActiveTimerEntry(),
+    ])
 
-    if (error) {
-      console.error('Feil ved henting av timer:', error)
+    if (requestId !== entriesRequestId.current) return
+
+    if (entriesResult.error || activeResult.error) {
+      console.error('Feil ved henting av timer:', entriesResult.error ?? activeResult.error)
       setNotice({ type: 'error', text: 'Kunne ikke hente timer for valgt dato.' })
+      if (!entriesResult.error) {
+        setEntries(entriesResult.data ?? [])
+      }
+      if (!activeResult.error) {
+        setActiveEntry(activeResult.data ?? null)
+      }
       setLoading(false)
       return
     }
 
-    const active = (data ?? []).find((entry) => !entry.end_time)
     setNotice(null)
-    setActiveEntry(active ?? null)
-    setEntries(data ?? [])
+    setActiveEntry(activeResult.data ?? null)
+    setEntries(entriesResult.data ?? [])
     setLoading(false)
   }
 
   async function fetchRangeEntries() {
+    const requestId = ++rangeRequestId.current
     setRangeLoading(true)
     const start = viewMode === 'week' ? selectedWeek : getMonthStart(selectedMonth)
     const end = viewMode === 'week' ? getWeekEnd(selectedWeek) : getMonthEnd(selectedMonth)
     const { data, error } = await fetchEntriesForRange(start, end)
+
+    if (requestId !== rangeRequestId.current) return
 
     if (error) {
       console.error('Feil ved henting av timer for periode:', error)
@@ -134,6 +152,20 @@ export function useTimeTrackerData() {
     const userId = await getSignedInUserId()
     if (!userId) return
 
+    const { data: existingActive, error: activeLookupError } = await fetchActiveTimerEntry()
+    if (activeLookupError) {
+      console.error('Feil ved kontroll av aktiv timer:', activeLookupError)
+      setNotice({ type: 'error', text: 'Kunne ikke kontrollere aktiv timer. Prøv igjen.' })
+      return
+    }
+
+    if (existingActive) {
+      setNotice({ type: 'info', text: 'Du har allerede en aktiv timer.' })
+      setActiveEntry(existingActive)
+      setActivePanel('focus')
+      return
+    }
+
     const startAt = new Date().toISOString()
     const { data, error } = await createTimerEntry(userId, projectId, startAt)
 
@@ -146,14 +178,16 @@ export function useTimeTrackerData() {
     setNotice({ type: 'info', text: 'Timer startet. Fokusmodus er aktiv.' })
     setNow(Date.now())
     setActiveEntry(data)
-    setEntries((previous) => [data, ...previous])
+    if (toDateString(new Date(data.start_time)) === selectedDate) {
+      setEntries((previous) => [data, ...previous])
+    }
   }
 
   async function stopTimer() {
     if (!activeEntry) return
 
     const endAt = new Date().toISOString()
-    const { error } = await stopTimerEntry(activeEntry.id, endAt)
+    const { data, error } = await stopTimerEntry(activeEntry.id, endAt)
 
     if (error) {
       console.error('Feil ved stopp av timer:', error)
@@ -163,11 +197,18 @@ export function useTimeTrackerData() {
 
     setNotice({ type: 'info', text: 'Timer stoppet.' })
     setActiveEntry(null)
+    if (data && toDateString(new Date(data.start_time)) === selectedDate) {
+      setEntries((previous) => previous.map((entry) => (entry.id === data.id ? data : entry)))
+    }
     await fetchEntries()
+    if (viewMode !== 'day') {
+      await fetchRangeEntries()
+    }
   }
 
   async function handleStopTimer() {
-    await saveSessionNote()
+    const saved = await saveSessionNote()
+    if (!saved) return
     await stopTimer()
   }
 
@@ -182,6 +223,9 @@ export function useTimeTrackerData() {
 
     setNotice(null)
     await fetchEntries()
+    if (viewMode !== 'day') {
+      await fetchRangeEntries()
+    }
   }
 
   async function updateEntry(id: string, updates: Partial<TimeEntry>) {
@@ -195,6 +239,9 @@ export function useTimeTrackerData() {
 
     setNotice(null)
     await fetchEntries()
+    if (viewMode !== 'day') {
+      await fetchRangeEntries()
+    }
   }
 
   async function addProject(name: string) {
@@ -225,6 +272,9 @@ export function useTimeTrackerData() {
     setNotice(null)
     setProjects((previous) => previous.filter((project) => project.id !== id))
     await fetchEntries()
+    if (viewMode !== 'day') {
+      await fetchRangeEntries()
+    }
   }
 
   async function renameProject(id: string, name: string) {
@@ -245,20 +295,25 @@ export function useTimeTrackerData() {
   }
 
   async function saveSessionNote() {
-    if (!activeEntry) return
+    if (!activeEntry) return true
 
     const nextNote = sessionNote.trim()
-    if ((activeEntry.description ?? '') === nextNote) return
+    if ((activeEntry.description ?? '') === nextNote) return true
 
     const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
 
     if (error) {
       console.error('Feil ved lagring av notat:', error)
       setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
-      return
+      return false
     }
 
     setActiveEntry((previous) => (previous ? { ...previous, description: nextNote || null } : previous))
+    setEntries((previous) =>
+      previous.map((entry) => (entry.id === activeEntry.id ? { ...entry, description: nextNote || null } : entry)),
+    )
+    setNotice(null)
+    return true
   }
 
   return {

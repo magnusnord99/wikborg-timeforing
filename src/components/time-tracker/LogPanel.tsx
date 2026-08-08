@@ -20,6 +20,9 @@ interface Props {
   onDeleteEntry: (id: string) => void
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
+  sessionNote: string
+  onSessionNoteChange: (value: string) => void
+  onSaveSessionNote: () => void
   selectedWeek: string
   selectedMonth: string
   rangeEntries: TimeEntry[]
@@ -44,6 +47,9 @@ export function LogPanel({
   onDeleteEntry,
   viewMode,
   onViewModeChange,
+  sessionNote,
+  onSessionNoteChange,
+  onSaveSessionNote,
   selectedWeek,
   selectedMonth,
   rangeEntries,
@@ -121,6 +127,9 @@ export function LogPanel({
               activeEntry={activeEntry}
               onEdit={onEditEntry}
               onDelete={onDeleteEntry}
+              sessionNote={sessionNote}
+              onSessionNoteChange={onSessionNoteChange}
+              onSaveSessionNote={onSaveSessionNote}
               now={now}
             />
           )}

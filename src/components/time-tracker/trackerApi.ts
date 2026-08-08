@@ -1,20 +1,29 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
+import { getLocalDateEndExclusiveIso, getLocalDateStartIso } from '../time-utils'
+
+const PAGE_SIZE = 1000
 
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
 
 export async function fetchEntriesForDate(selectedDate: string) {
-  const start = `${selectedDate}T00:00:00`
-  const end = `${selectedDate}T23:59:59`
+  return fetchEntriesBetween(
+    getLocalDateStartIso(selectedDate),
+    getLocalDateEndExclusiveIso(selectedDate),
+    false,
+  )
+}
 
+export async function fetchActiveTimerEntry() {
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', start)
-    .lte('start_time', end)
+    .is('end_time', null)
     .order('start_time', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 }
 
 export async function getSignedInUserId() {
@@ -34,7 +43,13 @@ export async function createTimerEntry(userId: string, projectId: string, startT
 }
 
 export async function stopTimerEntry(entryId: string, endTime: string) {
-  return supabase.from('time_entries').update({ end_time: endTime }).eq('id', entryId)
+  return supabase
+    .from('time_entries')
+    .update({ end_time: endTime })
+    .eq('id', entryId)
+    .is('end_time', null)
+    .select()
+    .maybeSingle()
 }
 
 export async function deleteTimeEntry(entryId: string) {
@@ -62,10 +77,37 @@ export async function updateEntryDescription(entryId: string, description: strin
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
-  return supabase
-    .from('time_entries')
-    .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
-    .order('start_time', { ascending: true })
+  return fetchEntriesBetween(
+    getLocalDateStartIso(startDate),
+    getLocalDateEndExclusiveIso(endDate),
+    true,
+  )
+}
+
+async function fetchEntriesBetween(startIso: string, endExclusiveIso: string, ascending: boolean) {
+  const entries: TimeEntry[] = []
+  let from = 0
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .select('*')
+      .gte('start_time', startIso)
+      .lt('start_time', endExclusiveIso)
+      .order('start_time', { ascending })
+      .range(from, from + PAGE_SIZE - 1)
+
+    if (error) {
+      return { data: null, error }
+    }
+
+    const page = (data ?? []) as TimeEntry[]
+    entries.push(...page)
+
+    if (page.length < PAGE_SIZE) {
+      return { data: entries, error: null }
+    }
+
+    from += PAGE_SIZE
+  }
 }
