@@ -1,7 +1,15 @@
 import type { CSSProperties } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Project, TimeEntry } from '../../types'
-import { formatHours, getMinutesBetween, getMonthEnd, getMonthStart, groupEntriesByDate, shiftDate, toDateString, toMonthString } from '../time-utils'
+import {
+  formatHours,
+  getMinutesBetween,
+  getMonthCalendarBounds,
+  groupEntriesByDate,
+  shiftDate,
+  toDateString,
+  toMonthString,
+} from '../time-utils'
 
 interface Props {
   month: string
@@ -15,23 +23,12 @@ interface Props {
 const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn']
 
 function buildCalendarGrid(month: string): string[][] {
-  const monthStart = getMonthStart(month)
-  const monthEnd = getMonthEnd(month)
-
-  const startDate = new Date(`${monthStart}T12:00:00`)
-  const startDay = startDate.getDay()
-  const gridStartOffset = startDay === 0 ? -6 : 1 - startDay
-  const gridStart = shiftDate(monthStart, gridStartOffset)
-
-  const endDate = new Date(`${monthEnd}T12:00:00`)
-  const endDay = endDate.getDay()
-  const gridEndOffset = endDay === 0 ? 0 : 7 - endDay
-  const gridEnd = shiftDate(monthEnd, gridEndOffset)
+  const { start, end } = getMonthCalendarBounds(month)
 
   const weeks: string[][] = []
-  let current = gridStart
+  let current = start
 
-  while (current <= gridEnd) {
+  while (current <= end) {
     const week: string[] = []
     for (let i = 0; i < 7; i++) {
       week.push(current)
@@ -48,6 +45,7 @@ export function MonthView({ month, entries, projects, loading, onDayClick, onNav
   const weeks = buildCalendarGrid(month)
 
   const completed = entries.filter((e) => e.end_time)
+  const monthEntries = completed.filter((entry) => toMonthString(toDateString(new Date(entry.start_time))) === month)
   const byDate = groupEntriesByDate(completed)
 
   const monthLabel = new Date(`${month}-15T12:00:00`).toLocaleDateString('nb-NO', {
@@ -56,7 +54,7 @@ export function MonthView({ month, entries, projects, loading, onDayClick, onNav
   })
 
   const allProjectMinutes = new Map<string, number>()
-  for (const entry of completed) {
+  for (const entry of monthEntries) {
     const mins = getMinutesBetween(entry.start_time, entry.end_time!)
     allProjectMinutes.set(entry.project_id, (allProjectMinutes.get(entry.project_id) ?? 0) + mins)
   }
