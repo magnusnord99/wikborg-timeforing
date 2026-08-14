@@ -6,6 +6,7 @@ import {
   createTimerEntry,
   deleteProjectRecord,
   deleteTimeEntry,
+  fetchActiveTimerEntry,
   fetchEntriesForDate,
   fetchEntriesForRange,
   fetchProjectsQuery,
@@ -77,16 +78,18 @@ export function useTimeTrackerData() {
 
   async function fetchEntries() {
     setLoading(true)
-    const { data, error } = await fetchEntriesForDate(selectedDate)
+    const [{ data, error }, { data: active, error: activeError }] = await Promise.all([
+      fetchEntriesForDate(selectedDate),
+      fetchActiveTimerEntry(),
+    ])
 
-    if (error) {
-      console.error('Feil ved henting av timer:', error)
+    if (error || activeError) {
+      console.error('Feil ved henting av timer:', error ?? activeError)
       setNotice({ type: 'error', text: 'Kunne ikke hente timer for valgt dato.' })
       setLoading(false)
       return
     }
 
-    const active = (data ?? []).find((entry) => !entry.end_time)
     setNotice(null)
     setActiveEntry(active ?? null)
     setEntries(data ?? [])
@@ -146,7 +149,9 @@ export function useTimeTrackerData() {
     setNotice({ type: 'info', text: 'Timer startet. Fokusmodus er aktiv.' })
     setNow(Date.now())
     setActiveEntry(data)
-    setEntries((previous) => [data, ...previous])
+    if (toDateString(new Date(data.start_time)) === selectedDate) {
+      setEntries((previous) => [data, ...previous])
+    }
   }
 
   async function stopTimer() {
@@ -167,7 +172,9 @@ export function useTimeTrackerData() {
   }
 
   async function handleStopTimer() {
-    await saveSessionNote()
+    const noteSaved = await saveSessionNote()
+    if (!noteSaved) return
+
     await stopTimer()
   }
 
@@ -245,20 +252,21 @@ export function useTimeTrackerData() {
   }
 
   async function saveSessionNote() {
-    if (!activeEntry) return
+    if (!activeEntry) return true
 
     const nextNote = sessionNote.trim()
-    if ((activeEntry.description ?? '') === nextNote) return
+    if ((activeEntry.description ?? '') === nextNote) return true
 
     const { error } = await updateEntryDescription(activeEntry.id, nextNote || null)
 
     if (error) {
       console.error('Feil ved lagring av notat:', error)
       setNotice({ type: 'error', text: 'Kunne ikke lagre arbeidsnotatet.' })
-      return
+      return false
     }
 
     setActiveEntry((previous) => (previous ? { ...previous, description: nextNote || null } : previous))
+    return true
   }
 
   return {
