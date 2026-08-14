@@ -1,19 +1,20 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
+import { shiftDate, toLocalDayStartIso } from '../time-utils'
 
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
 
 export async function fetchEntriesForDate(selectedDate: string) {
-  const start = `${selectedDate}T00:00:00`
-  const end = `${selectedDate}T23:59:59`
+  const start = toLocalDayStartIso(selectedDate)
+  const end = toLocalDayStartIso(shiftDate(selectedDate, 1))
 
   return supabase
     .from('time_entries')
     .select('*')
     .gte('start_time', start)
-    .lte('start_time', end)
+    .lt('start_time', end)
     .order('start_time', { ascending: false })
 }
 
@@ -65,7 +66,7 @@ export async function fetchEntriesForRange(startDate: string, endDate: string) {
   return supabase
     .from('time_entries')
     .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
+    .gte('start_time', toLocalDayStartIso(startDate))
+    .lt('start_time', toLocalDayStartIso(shiftDate(endDate, 1)))
     .order('start_time', { ascending: true })
 }
