@@ -1,6 +1,8 @@
 import { supabase } from '../../lib/supabase'
 import type { TimeEntry } from '../../types'
 
+const RANGE_PAGE_SIZE = 1000
+
 export async function fetchProjectsQuery() {
   return supabase.from('projects').select('*').order('name')
 }
@@ -62,10 +64,30 @@ export async function updateEntryDescription(entryId: string, description: strin
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
-  return supabase
-    .from('time_entries')
-    .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
-    .order('start_time', { ascending: true })
+  const entries: TimeEntry[] = []
+  let from = 0
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .select('*')
+      .gte('start_time', `${startDate}T00:00:00`)
+      .lte('start_time', `${endDate}T23:59:59`)
+      .order('start_time', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + RANGE_PAGE_SIZE - 1)
+
+    if (error) {
+      return { data: null, error }
+    }
+
+    const page = data ?? []
+    entries.push(...page)
+
+    if (page.length < RANGE_PAGE_SIZE) {
+      return { data: entries, error: null }
+    }
+
+    from += RANGE_PAGE_SIZE
+  }
 }
