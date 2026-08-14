@@ -17,6 +17,16 @@ export async function fetchEntriesForDate(selectedDate: string) {
     .order('start_time', { ascending: false })
 }
 
+export async function fetchActiveTimerEntry() {
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .is('end_time', null)
+    .order('start_time', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+}
+
 export async function getSignedInUserId() {
   const {
     data: { user },
@@ -62,10 +72,26 @@ export async function updateEntryDescription(entryId: string, description: strin
 }
 
 export async function fetchEntriesForRange(startDate: string, endDate: string) {
-  return supabase
-    .from('time_entries')
-    .select('*')
-    .gte('start_time', `${startDate}T00:00:00`)
-    .lte('start_time', `${endDate}T23:59:59`)
-    .order('start_time', { ascending: true })
+  const pageSize = 1000
+  const entries: TimeEntry[] = []
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from('time_entries')
+      .select('*')
+      .gte('start_time', `${startDate}T00:00:00`)
+      .lte('start_time', `${endDate}T23:59:59`)
+      .order('start_time', { ascending: true })
+      .range(from, from + pageSize - 1)
+
+    if (error) {
+      return { data: null, error }
+    }
+
+    entries.push(...(data ?? []))
+
+    if (!data || data.length < pageSize) {
+      return { data: entries, error: null }
+    }
+  }
 }
