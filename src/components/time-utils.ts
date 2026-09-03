@@ -96,8 +96,8 @@ export function getMonthStart(month: string): string {
 
 export function getMonthEnd(month: string): string {
   const [year, mon] = month.split('-').map(Number)
-  const date = new Date(year, mon, 0)
-  return toDateString(date)
+  const lastDay = new Date(year, mon, 0).getDate()
+  return `${year}-${String(mon).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 }
 
 export function toMonthString(date: string): string {

@@ -123,8 +123,10 @@ export function useTimeTrackerData() {
   function handleMonthNav(direction: -1 | 1) {
     setSelectedMonth((prev) => {
       const [year, month] = prev.split('-').map(Number)
-      const date = new Date(year, month - 1 + direction, 1)
-      return toMonthString(toDateString(date))
+      const totalMonths = year * 12 + (month - 1) + direction
+      const newYear = Math.floor(totalMonths / 12)
+      const newMonth = (totalMonths % 12) + 1
+      return `${newYear}-${String(newMonth).padStart(2, '0')}`
     })
   }
 
