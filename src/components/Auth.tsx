@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-type AuthMode = 'login' | 'signup'
+type AuthMode = 'login' | 'signup' | 'forgot'
 
 export function Auth() {
   const [email, setEmail] = useState('')
@@ -20,6 +20,12 @@ export function Auth() {
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
         setMessage({ type: 'success', text: 'Sjekk e-posten din for å bekrefte kontoen.' })
+      } else if (mode === 'forgot') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        })
+        if (error) throw error
+        setMessage({ type: 'success', text: 'Sjekk e-posten din for lenke til å tilbakestille passordet.' })
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
@@ -39,7 +45,9 @@ export function Auth() {
       <div style={styles.card}>
         <h1 style={styles.title}>Wikborg Tidsføring</h1>
         <p style={styles.subtitle}>
-          {mode === 'login' ? 'Logg inn for å fortsette' : 'Opprett konto'}
+          {mode === 'login' && 'Logg inn for å fortsette'}
+          {mode === 'signup' && 'Opprett konto'}
+          {mode === 'forgot' && 'Tilbakestill passord'}
         </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -52,16 +60,18 @@ export function Auth() {
             style={styles.input}
             autoComplete="email"
           />
-          <input
-            type="password"
-            placeholder="Passord"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={styles.input}
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            minLength={6}
-          />
+          {mode !== 'forgot' && (
+            <input
+              type="password"
+              placeholder="Passord"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={styles.input}
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              minLength={6}
+            />
+          )}
           {message && (
             <p
               style={{
@@ -73,19 +83,40 @@ export function Auth() {
             </p>
           )}
           <button type="submit" disabled={loading} style={styles.button}>
-            {loading ? 'Venter...' : mode === 'login' ? 'Logg inn' : 'Opprett konto'}
+            {loading
+              ? 'Venter...'
+              : mode === 'login'
+                ? 'Logg inn'
+                : mode === 'signup'
+                  ? 'Opprett konto'
+                  : 'Send lenke'}
           </button>
         </form>
+
+        {mode === 'login' && (
+          <button
+            type="button"
+            onClick={() => {
+              setMode('forgot')
+              setMessage(null)
+            }}
+            style={styles.forgot}
+          >
+            Glemt passord?
+          </button>
+        )}
 
         <button
           type="button"
           onClick={() => {
-            setMode(mode === 'login' ? 'signup' : 'login')
+            setMode(mode === 'signup' ? 'login' : mode === 'forgot' ? 'login' : 'signup')
             setMessage(null)
           }}
           style={styles.switch}
         >
-          {mode === 'login' ? 'Har du ikke konto? Registrer deg' : 'Har du konto? Logg inn'}
+          {mode === 'login' && 'Har du ikke konto? Registrer deg'}
+          {mode === 'signup' && 'Har du konto? Logg inn'}
+          {mode === 'forgot' && 'Tilbake til innlogging'}
         </button>
       </div>
     </div>
@@ -154,6 +185,16 @@ const styles: Record<string, React.CSSProperties> = {
     border: 'none',
     color: 'var(--color-text-muted)',
     fontSize: 14,
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    width: '100%',
+  },
+  forgot: {
+    marginTop: 16,
+    background: 'none',
+    border: 'none',
+    color: 'var(--color-text-muted)',
+    fontSize: 13,
     cursor: 'pointer',
     textDecoration: 'underline',
     width: '100%',

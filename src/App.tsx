@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from './lib/supabase'
 import { Auth } from './components/Auth'
+import { ResetPassword } from './components/ResetPassword'
 import { TimeTracker } from './components/TimeTracker'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -15,7 +17,10 @@ function App() {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => setSession(session)
+      (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
+        setSession(session)
+      }
     )
 
     return () => subscription.unsubscribe()
@@ -47,6 +52,10 @@ function App() {
         <p>Laster...</p>
       </div>
     )
+  }
+
+  if (passwordRecovery) {
+    return <ResetPassword onDone={() => setPasswordRecovery(false)} />
   }
 
   if (!session) {
