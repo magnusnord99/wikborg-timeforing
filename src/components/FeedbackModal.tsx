@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { X, Bug, Lightbulb, Send } from 'lucide-react'
+import { Fragment, useState } from 'react'
+import { X, Bug, Lightbulb, List, Send } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { FeedbackListModal } from './FeedbackListModal'
 
 interface Props {
   onClose: () => void
@@ -15,6 +16,7 @@ export function FeedbackModal({ onClose }: Props) {
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showList, setShowList] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -45,13 +47,25 @@ export function FeedbackModal({ onClose }: Props) {
   }
 
   return (
-    <div style={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={styles.modal} role="dialog" aria-modal="true">
+    <Fragment>
+      <div style={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div style={styles.modal} role="dialog" aria-modal="true">
         <div style={styles.header}>
           <h2 style={styles.title}>Send tilbakemelding</h2>
-          <button onClick={onClose} style={styles.closeButton} aria-label="Lukk">
-            <X size={18} />
-          </button>
+          <div style={styles.headerActions}>
+            <button
+              type="button"
+              onClick={() => setShowList(true)}
+              style={styles.closeButton}
+              aria-label="Vis alle tilbakemeldinger"
+              title="Vis alle tilbakemeldinger"
+            >
+              <List size={18} />
+            </button>
+            <button onClick={onClose} style={styles.closeButton} aria-label="Lukk">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {submitted ? (
@@ -114,8 +128,11 @@ export function FeedbackModal({ onClose }: Props) {
             </button>
           </form>
         )}
+        </div>
       </div>
-    </div>
+
+      {showList && <FeedbackListModal onClose={() => setShowList(false)} />}
+    </Fragment>
   )
 }
 
@@ -150,6 +167,10 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 18,
     fontWeight: 700,
+  },
+  headerActions: {
+    display: 'flex',
+    gap: 8,
   },
   closeButton: {
     display: 'inline-flex',
